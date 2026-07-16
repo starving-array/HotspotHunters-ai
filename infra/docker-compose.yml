@@ -1,0 +1,288 @@
+# =============================================================================
+# KSP Intelligence Portal — Docker Compose (Phase 0: Infrastructure only)
+# File: infra/docker-compose.yml
+#
+# Phase 0 brings up the 5 infrastructure services. Application services
+# (spring-boot-api, python-ml, react-frontend) are commented out and will be
+# uncommented in later phases once their code is built.
+#
+# All services communicate on the internal bridge network: ksp-network.
+# Only frontend (3000) and API (8080) are exposed to the host in later phases.
+#
+# Prerequisites:
+#   - Docker Desktop 4.30+ (Compose v2)
+#   - 8GB+ RAM allocated to Docker
+#   - .env file copied from .env.example
+# =============================================================================
+
+name: ksp-intelligence-portal
+
+networks:
+  ksp-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  elasticsearch-data:
+  redis-data:
+  kafka-data:
+  zookeeper-data:
+  zookeeper-logs:
+
+services:
+
+  # ===========================================================================
+  # 1. Zookeeper — required by Kafka (traditional mode, per architecture doc)
+  # ===========================================================================
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    container_name: ksp-zookeeper
+    networks: [ksp-network]
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-logs:/var/lib/zookeeper/log
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  # ===========================================================================
+  # 2. Kafka — message broker, partitioned by district_code (30 partitions)
+  # ===========================================================================
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: ksp-kafka
+    networks: [ksp-network]
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+      - "29092:29092"   # internal (for other containers)
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+  # ===========================================================================
+  # 3. Kafka Init — one-shot container that creates topics after Kafka is ready
+  # ===========================================================================
+  kafka-init:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: ksp-kafka-init
+    networks: [ksp-network]
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    entrypoint: ["/bin/bash", "/scripts/topics.sh"]
+    volumes:
+      - ./kafka/topics.sh:/scripts/topics.sh:ro
+    restart: "no"
+
+  # ===========================================================================
+  # 4. PostgreSQL — transactional source of truth, monthly-partitioned
+  # ===========================================================================
+  postgres:
+    image: postgres:16
+    container_name: ksp-postgres
+    networks: [ksp-network]
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ksp_intelligence}
+      POSTGRES_USER: ${POSTGRES_USER:-ksp_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  # ===========================================================================
+  # 5. ElasticSearch — geospatial + full-text search index
+  #    Single-node, xpack security disabled for local dev (re-enable in Phase 6)
+  # ===========================================================================
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.0
+    container_name: ksp-elasticsearch
+    networks: [ksp-network]
+    ports:
+      - "9200:9200"
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      xpack.security.transport.ssl.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      bootstrap.memory_lock: "true"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+      - ./elasticsearch/mappings.json:/usr/share/elasticsearch/mappings/crime-index.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 60s
+    restart: unless-stopped
+
+  # ===========================================================================
+  # 6. Redis — Sorted Set leaderboard, Hash counters, Stream alerts, rate limit
+  # ===========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: ksp-redis
+    networks: [ksp-network]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # ===========================================================================
+  # 6.5. Data Generator — Python image for bulk load + live Kafka producer.
+  #      NOT auto-started; use `docker compose run --rm data-generator <cmd>`.
+  #      Depends on Postgres + ES + Kafka healthy.
+  # ===========================================================================
+  data-generator:
+    build:
+      context: ../data-generator
+      dockerfile: Dockerfile
+    container_name: ksp-data-generator
+    networks: [ksp-network]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    env_file: ../.env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      ELASTICSEARCH_HOST: elasticsearch
+      ELASTICSEARCH_PORT: 9200
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    profiles: ["tools"]    # no auto-start on `up`; opt-in via --profile tools
+    restart: "no"
+
+  # ===========================================================================
+  # 7. Spring Boot API — port 8080 (Phase 2: Kafka consumer pipeline)
+  # ===========================================================================
+  spring-boot-api:
+    build:
+      context: ../api
+      dockerfile: Dockerfile
+    container_name: ksp-api
+    networks: [ksp-network]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+      elasticsearch:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    env_file: ../.env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/ksp_intelligence
+      POSTGRES_DB: ksp_intelligence
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      ELASTICSEARCH_HOST: elasticsearch
+      ELASTICSEARCH_PORT: 9200
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      ML_SERVICE_URL: http://python-ml:8001
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+
+  # ===========================================================================
+  # 8. Python ML + LLM Service — port 8001 (UNCOMMENT IN PHASE 4)
+  # ===========================================================================
+  # python-ml:
+  #   build:
+  #     context: ../ml-service
+  #     dockerfile: Dockerfile
+  #   container_name: ksp-ml
+  #   networks: [ksp-network]
+  #   depends_on:
+  #     redis:
+  #       condition: service_healthy
+  #   ports:
+  #     - "8001:8001"
+  #   env_file: ../.env
+  #   environment:
+  #     REDIS_HOST: redis
+  #   restart: unless-stopped
+
+  # ===========================================================================
+  # 9. React Frontend — port 3000 (UNCOMMENT IN PHASE 5)
+  # ===========================================================================
+  # react-frontend:
+  #   build:
+  #     context: ../frontend
+  #     dockerfile: Dockerfile
+  #   container_name: ksp-frontend
+  #   networks: [ksp-network]
+  #   depends_on:
+  #     spring-boot-api:
+  #       condition: service_healthy
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     VITE_API_BASE_URL: http://localhost:8080
+  #   restart: unless-stopped

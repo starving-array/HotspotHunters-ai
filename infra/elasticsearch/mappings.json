@@ -1,0 +1,23 @@
+﻿{
+  "mappings": {
+    "properties": {
+      "fir_id":          { "type": "keyword" },
+      "district":        { "type": "keyword" },
+      "taluk":           { "type": "keyword" },
+      "station_code":    { "type": "keyword" },
+      "crime_type":      { "type": "keyword" },
+      "crime_subtype":   { "type": "keyword" },
+      "location":        { "type": "geo_point" },
+      "incident_ts":     { "type": "date" },
+      "registered_ts":   { "type": "date" },
+      "offender_id":     { "type": "keyword" },
+      "victim_id":       { "type": "keyword" },
+      "modus_operandi":  { "type": "text", "analyzer": "english" },
+      "status":          { "type": "keyword" }
+    }
+  },
+  "settings": {
+    "number_of_shards": 3,
+    "number_of_replicas": 0
+  }
+}

@@ -1,0 +1,20 @@
+# Data Generator — Python dependencies
+# KSP Intelligence Portal — Phase 1
+
+# Data generation
+Faker==25.8.0
+
+# PostgreSQL bulk loading (COPY FROM STDIN)
+psycopg2-binary==2.9.9
+
+# ElasticSearch bulk indexing
+elasticsearch==8.14.0
+
+# Kafka producer
+kafka-python==2.0.2
+
+# Math / data processing
+numpy==2.0.0
+
+# Testing
+pytest==8.3.2

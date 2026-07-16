@@ -1,0 +1,37 @@
+# Secrets — never commit
+.env
+*.key
+*.pem
+application-secrets.yml
+application-local.yml
+
+# Java build artifacts
+api/target/
+*.class
+*.jar
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+ml-service/models/*.pkl    # Large model files — use Git LFS or exclude
+
+# Node / React
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Docker
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+KSP_Datathon_2026_Architecture_And_Dev_Plan.md

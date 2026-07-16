@@ -1,0 +1,121 @@
+# =============================================================================
+# KSP Intelligence Portal — Spring Boot main config
+# Source: env vars from .env (Docker compose env_file).
+# =============================================================================
+
+spring:
+  application:
+    name: ksp-intelligence-api
+
+  # ----- JPA / Hibernate -----
+  jpa:
+    hibernate:
+      ddl-auto: none     # schema is created by init.sql on postgres container
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        # Partition routing is automatic in PG 16 — no extra config needed.
+
+  datasource:
+    # Reuse env POSTGRES_URL if it's jdbc-form; otherwise build from host/port/db
+    url: ${POSTGRES_URL:jdbc:postgresql://${POSTGRES_HOST:postgres}:${POSTGRES_PORT:5432}/${POSTGRES_DB:ksp_intelligence}}
+    username: ${POSTGRES_USER:ksp_app}
+    password: ${POSTGRES_PASSWORD:changeme}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+
+  # ----- Kafka -----
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
+    consumer:
+      # Each consumer group is configured per-listener in @KafkaListener(groupId=...).
+      auto-offset-reset: earliest          # dev: re-consume existing topic on restart
+      enable-auto-commit: false            # manual ack to ensure idempotent consume
+      key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: "com.ksp.intelligence.*"
+        spring.json.use.type.headers: false    # we use concrete FirEventDto type on the listener
+        spring.json.value.default.type: com.ksp.intelligence.model.FirEventDto
+    listener:
+      ack-mode: manual_immediate           # commit each ack() call (per record)
+      concurrency: 3                        # 30-partition topic -> 3 threads per group
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+  # ----- ElasticSearch -----
+  elasticsearch:
+    uris: ${ELASTICSEARCH_SCHEME:http}://${ELASTICSEARCH_HOST:elasticsearch}:${ELASTICSEARCH_PORT:9200}
+    connection-timeout: 10s
+    socket-timeout: 60s
+
+  # ----- Redis -----
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      timeout: 5s
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 2
+
+# ----- App-specific — topics, indexes, Redis keys -----
+ksp:
+  kafka:
+    fir-topic: ${KAFKA_FIR_TOPIC:fir-events}
+    alert-topic: ${KAFKA_ALERT_TOPIC:alert-events}
+    consumer-groups:
+      indexing:    indexing-service
+      aggregation: aggregation-service
+      anomaly:     anomaly-service
+  elasticsearch:
+    crime-index: ${ELASTICSEARCH_INDEX:crime-index}
+  redis:
+    hotspots-key: "hotspots:live"
+    district24h-prefix: "district:24h:"
+    district-rollup-prefix: "district:rollup:60:"
+    district-baseline-prefix: "district:baseline:24h:"
+    stream-key: "alerts:stream"
+    stream-maxlen: 500
+  anomaly:
+    rolling-window-minutes: 60            # 60-min window for current count
+    baseline-window-minutes: 1440          # 24h baseline for mean+stddev
+    spike-threshold-sigma: 2.0             # spike when current - mean > 2*sigma
+    high-severity-sigma: 3.0               # publish HIGH above this many sigma
+
+# ----- Actuator -----
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  health:
+    redis:
+      enabled: true
+    elasticsearch:
+      enabled: true
+
+# ----- Server -----
+server:
+  port: ${SERVER_PORT:8080}
+  forward-headers-strategy: native
+
+logging:
+  level:
+    com.ksp.intelligence: INFO
+    org.springframework.kafka: INFO
+    org.hibernate.SQL: WARN
