@@ -49,3 +49,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed invalid `precision` / `scale` attributes from `Double`-typed `@Column` declarations (`FirRecord.latitude`, `FirRecord.longitude`, `Offender.riskScore`) — these caused Hibernate `IllegalArgumentException: scale has no meaning for SQL floating point types` under H2 PostgreSQL-mode DDL generation
 - `KafkaConsumerConfig` now honors `spring.kafka.listener.auto-startup` (previously the property was declared in `application.yml` but never read by the manually-built `ConcurrentKafkaListenerContainerFactory`), allowing the context-load test to bring up Spring with `auto-startup=false`
 - `AnomalyDetectionServiceTest.zAboveThreshold_returnsSpike` mock baseline/current values now match the service's actual `mean = baseline/baselineWindow × rollingWindow` formula
+### Completed — Phase 2
+- Live pipeline verified: 100 synthetic FIR events streamed via `kafka_producer.py`; Redis sorted set `hotspots:live` now contains the expected district rankings (ZCARD > 0) and the alerts stream has the correct length.
+- All unit tests (`mvn clean test`) and integration tests (`mvn verify`) pass.

@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.EqualsAndHashCode;
 
 import java.time.Instant;
 import java.util.Objects;
@@ -37,8 +38,10 @@ import java.util.Objects;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString(of = {"alertId", "districtCode", "severity", "currentCount"})
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class AlertEvent {
 
+    @EqualsAndHashCode.Include
     private String alertId;
     private String districtCode;
     private Severity severity;

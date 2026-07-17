@@ -37,7 +37,7 @@ Full architecture document: `KSP_Datathon_2026_Architecture_And_Dev_Plan.md`
 ```bash
 # 1. Clone the repository
 git clone <repo-url>
-cd ksp-intelligence-portal
+cd HotspotHunters-ai
 
 # 2. Create .env from example
 cp .env.example .env

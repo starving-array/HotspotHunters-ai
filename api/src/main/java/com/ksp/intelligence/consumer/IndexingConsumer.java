@@ -68,6 +68,7 @@ public class IndexingConsumer {
     )
     public void onFirEvent(ConsumerRecord<String, FirEventDto> record, Acknowledgment ack) {
         FirEventDto dto = record.value();
+        log.debug("Received FIR DTO with firId: {}", dto != null ? dto.getFirId() : "null");
         try {
             FirRecord entity = FirRecord.from(dto);
             // 1. Postgres upsert (idempotent on PK)

@@ -12,9 +12,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.EqualsAndHashCode;
 
 import java.time.Instant;
-import java.util.Objects;
+
 
 /**
  * JPA entity for the {@code offenders} table (PostgreSQL).
@@ -30,9 +31,11 @@ import java.util.Objects;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString(of = {"offenderId"})
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Offender {
 
     @Id
+    @EqualsAndHashCode.Include
     @Column(name = "offender_id", length = 20, nullable = false, updatable = false)
     private String offenderId;
 
@@ -61,16 +64,6 @@ public class Offender {
     @Builder.Default
     private Instant createdAt = Instant.now();
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Offender offender = (Offender) o;
-        return Objects.equals(offenderId, offender.offenderId);
-    }
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(offenderId);
-    }
+
 }

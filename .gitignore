@@ -35,3 +35,4 @@ frontend/.env.local
 .DS_Store
 Thumbs.db
 KSP_Datathon_2026_Architecture_And_Dev_Plan.md
+CHANGELOG.md

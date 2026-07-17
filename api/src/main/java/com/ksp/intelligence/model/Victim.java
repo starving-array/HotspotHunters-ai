@@ -11,9 +11,10 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.EqualsAndHashCode;
 
 import java.time.Instant;
-import java.util.Objects;
+
 
 /** JPA entity for {@code victims} — PII-minimised: age_group + gender only. */
 @Entity
@@ -23,9 +24,11 @@ import java.util.Objects;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Victim {
 
     @Id
+    @EqualsAndHashCode.Include
     @Column(name = "victim_id", length = 20, nullable = false, updatable = false)
     private String victimId;
 
@@ -40,16 +43,5 @@ public class Victim {
     @Builder.Default
     private Instant createdAt = Instant.now();
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Victim victim = (Victim) o;
-        return Objects.equals(victimId, victim.victimId);
-    }
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(victimId);
-    }
 }

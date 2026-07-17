@@ -12,9 +12,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.EqualsAndHashCode;
 
 import java.time.Instant;
-import java.util.Objects;
+
 
 /**
  * JPA entity for the {@code fir_records} table (PostgreSQL).
@@ -32,11 +33,13 @@ import java.util.Objects;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString(of = {"firId", "districtCode", "crimeType", "incidentTs"})
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class FirRecord {
 
-    @Id
-    @Column(name = "fir_id", length = 20, nullable = false, updatable = false)
-    private String firId;
+@Id
+@EqualsAndHashCode.Include
+@Column(name = "fir_id", length = 20, nullable = false, updatable = false)
+private String firId;
 
     @Column(name = "station_code", length = 20, nullable = false)
     private String stationCode;
@@ -105,16 +108,5 @@ public class FirRecord {
                 .build();
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        FirRecord record = (FirRecord) o;
-        return Objects.equals(firId, record.firId);
-    }
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(firId);
-    }
 }

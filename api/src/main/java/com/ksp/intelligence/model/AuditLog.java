@@ -7,6 +7,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Temporal;
 import jakarta.persistence.TemporalType;
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -32,9 +33,11 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class AuditLog {
 
     @Id
+    @EqualsAndHashCode.Include
     @Column(name = "audit_id", columnDefinition = "uuid")
     @JdbcTypeCode(SqlTypes.UUID)
     private UUID auditId;
