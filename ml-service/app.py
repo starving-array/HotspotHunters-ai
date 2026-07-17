@@ -118,6 +118,63 @@ def call_llm(provider: LLMProviderConfig, user_query: str) -> dict:
             "max_tokens": 500,
         }
         headers = {"Authorization": f"Bearer {provider.api_key}", "content-type": "application/json"}
+    elif provider.name == "gemini":
+        # Google Gemini API (v1beta). Uses GET param key for API key.
+        api_key = provider.api_key or os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise ValueError("Gemini API key not provided")
+        model_name = provider.model or "gemini-1.5-flash"
+        endpoint = provider.endpoint or f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateMessage"
+        payload = {
+            "contents": [{"role": "user", "parts": [{"text": f"Extract structured JSON from this query: {user_query}"}]}],
+            "temperature": 0,
+            "maxOutputTokens": 500,
+        }
+        headers = {"content-type": "application/json", "x-goog-api-key": api_key}
+    elif provider.name == "fireworks":
+        # Fireworks AI follows OpenAI chat completions contract.
+        if not provider.api_key:
+            raise ValueError("Fireworks API key not provided")
+        model_name = provider.model or "fireworks-ai/fireworks-lite"
+        endpoint = provider.endpoint or "https://api.fireworks.ai/inference/v1/chat/completions"
+        payload = {
+            "model": model_name,
+            "messages": [{"role": "user", "content": f"Extract structured JSON from this query: {user_query}"}],
+            "temperature": 0,
+            "max_tokens": 500,
+        }
+        headers = {"Authorization": f"Bearer {provider.api_key}", "content-type": "application/json"}
+    elif provider.name == "gemma":
+        # Offline model – placeholder: treat as local regex fallback.
+        logger.info("Using offline Gemma model – falling back to regex parser for now")
+        # Re‑use the same regex logic as the local fallback below.
+        text = user_query.lower()
+        crime = None
+        if "robbery" in text:
+            crime = "robbery"
+        elif "theft" in text:
+            crime = "theft"
+        elif "murder" in text:
+            crime = "murder"
+        radius = None
+        m = re.search(r"(\d+(?:\.\d+)?)\s*km", text)
+        if m:
+            radius = float(m.group(1))
+        days = None
+        m2 = re.search(r"last\s+(\d+)\s+days?", text)
+        if m2:
+            days = int(m2.group(1))
+        location = None
+        m3 = re.search(r"near\s+(\w+)", text)
+        if m3:
+            location = m3.group(1)
+        return {
+            "crime_type": crime,
+            "location": location,
+            "radius_km": radius,
+            "days_back": days,
+            "raw_text": user_query,
+        }
     else:
         raise ValueError(f"Unsupported LLM provider: {provider.name}")
 
