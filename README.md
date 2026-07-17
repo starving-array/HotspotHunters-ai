@@ -8,7 +8,7 @@
 ![Redis](https://img.shields.io/badge/Redis-7-red)
 ![Docker](https://img.shields.io/badge/Docker-Compose-blue)
 ![React](https://img.shields.io/badge/React-18-cyan)
-![License](https://img.shields.io/badge/License-MIT-lightgrey)
+![License](https://img.shields.io/badge/License-Proprietary-red)
 
 > A production-grade distributed intelligence platform transforming Karnataka's crime data into real-time, explainable, geospatial insights.
 
@@ -323,7 +323,7 @@ The Grafana dashboard shows: API request latency histogram, error rate (5xx), Re
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+Proprietary — All Rights Reserved. See [LICENSE](LICENSE) for details. No part of this software may be used, copied, or distributed without the express written permission of the copyright holder.
 
 ---
 
