@@ -36,3 +36,7 @@ frontend/.env.local
 Thumbs.db
 KSP_Datathon_2026_Architecture_And_Dev_Plan.md
 CHANGELOG.md
+
+test_feature.md
+phases_completed.md
+KSP_Documentation_Generation_Prompt.md
