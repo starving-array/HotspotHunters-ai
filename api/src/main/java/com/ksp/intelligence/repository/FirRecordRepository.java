@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 /** Spring Data JPA repo for {@link FirRecord}. Used by IndexingConsumer (Phase 2). */
 @Repository
 public interface FirRecordRepository extends JpaRepository<FirRecord, String> {
+    java.util.List<FirRecord> findByDistrictCodeAndIncidentTsBetween(String districtCode, java.time.Instant start, java.time.Instant end);
     // Default CRUD methods suffice for the indexing consumer:
     //   save(s)         — upsert (idempotent on fir_id PK)
     //   existsById(id)  — pre-flight check (optional)
