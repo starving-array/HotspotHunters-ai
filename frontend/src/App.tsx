@@ -3,6 +3,7 @@ import HotspotLeaderboard from './components/HotspotLeaderboard';
 import MapView from './components/MapView';
 import SearchBar from './components/SearchBar';
 import PredictionPanel from './components/PredictionPanel';
+import LiveAlerts from './components/LiveAlerts';
 
 const App: React.FC = () => {
   return (
@@ -13,6 +14,7 @@ const App: React.FC = () => {
           <SearchBar />
           <PredictionPanel />
           <HotspotLeaderboard />
+          <LiveAlerts />
         </aside>
         <section className="map-area">
           <MapView />
