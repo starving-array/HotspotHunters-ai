@@ -120,6 +120,31 @@ CREATE TABLE IF NOT EXISTS offender_network (
     PRIMARY KEY (offender_a, offender_b, shared_fir_id);
 
 -- =============================================================
+-- CASEMASTER (core FIR table — simplified version for Phase 1)
+-- =============================================================
+CREATE TABLE IF NOT EXISTS CaseMaster (
+    CaseMasterID SERIAL,
+    CrimeNo VARCHAR(18) NOT NULL,
+    CaseNo VARCHAR(9),
+    CrimeRegisteredDate DATE NOT NULL,
+    PolicePersonID INT,
+    PoliceStationID INT NOT NULL,
+    CaseCategoryID INT,
+    GravityOffenceID INT,
+    CrimeMajorHeadID INT,
+    CrimeMinorHeadID INT,
+    CaseStatusID INT,
+    CourtID INT,
+    IncidentFromDate TIMESTAMP,
+    IncidentToDate TIMESTAMP,
+    InfoReceivedPSDate TIMESTAMP,
+    latitude DECIMAL(10,7),
+    longitude DECIMAL(10,7),
+    BriefFacts TEXT,
+    PRIMARY KEY (CaseMasterID, CrimeRegisteredDate)
+) ;
+
+-- =============================================================
 -- Missing tables & serial generator (Phase 0)
 -- =============================================================
 
@@ -254,4 +279,42 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO ksp_readonly
 --
 -- Row count per partition (after data load):
 --   SELECT tablename FROM pg_tables WHERE tablename LIKE 'fir_records_%' ORDER BY tablename;
+-- =============================================================================
+
+-- -------------------------------------------------
+-- ACT table
+CREATE TABLE IF NOT EXISTS Act (
+    ActCode VARCHAR(20) PRIMARY KEY,
+    ActDescription VARCHAR(500),
+    ShortName VARCHAR(50),
+    Active BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+-- SECTION table (composite PK ActCode+SectionCode)
+CREATE TABLE IF NOT EXISTS Section (
+    ActCode VARCHAR(20) NOT NULL REFERENCES Act(ActCode),
+    SectionCode VARCHAR(20) NOT NULL,
+    SectionDescription VARCHAR(500),
+    Active BOOLEAN NOT NULL DEFAULT TRUE,
+    PRIMARY KEY (ActCode, SectionCode)
+);
+
+-- Seed required Acts
+INSERT INTO Act (ActCode, ActDescription, ShortName, Active) VALUES
+    ('IPC','Indian Penal Code','IPC',TRUE),
+    ('IT_ACT','Information Technology Act','IT_ACT',TRUE),
+    ('SCST','Scheduled Castes and Scheduled Tribes (Prevention) Act','SCST',TRUE),
+    ('ARMS','Arms Act','ARMS',TRUE)
+ON CONFLICT (ActCode) DO NOTHING;
+
+-- Seed required Sections (including missing ones)
+INSERT INTO Section (ActCode, SectionCode, SectionDescription, Active) VALUES
+    ('IPC','406','Criminal breach of trust',TRUE),
+    ('IPC','407','Criminal breach of trust by carrier',TRUE),
+    ('IT_ACT','66C','Identity theft',TRUE),
+    ('IT_ACT','66D','Cheating by personation using computer resource',TRUE),
+    ('SCST','3','Atrocities',TRUE),
+    ('ARMS','25','Punishment for certain offences',TRUE)
+ON CONFLICT (ActCode, SectionCode) DO NOTHING;
+
 -- =============================================================================
