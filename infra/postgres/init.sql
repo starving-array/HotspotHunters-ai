@@ -8,6 +8,26 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";   -- for gen_random_uuid()
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- =============================================================
+-- ROLE SETUP (Phase 0)
+-- =============================================================
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ksp_app') THEN
+        CREATE ROLE ksp_app WITH LOGIN PASSWORD 'changeme';
+    END IF;
+END $$;
+
+GRANT CONNECT ON DATABASE ksp_intelligence TO ksp_app;
+GRANT USAGE ON SCHEMA public TO ksp_app;
+
+-- =============================================================
+-- PERMISSIONS (Phase 0)
+-- =============================================================
+-- Revoke UPDATE/DELETE on audit_log from all users (later will grant insert only to app)
+REVOKE UPDATE, DELETE ON audit_log FROM PUBLIC;
+
+
 -- =============================================================================
 -- 1. Victims table (data-minimized: no PII, only demographics)
 -- =============================================================================
@@ -97,7 +117,79 @@ CREATE TABLE IF NOT EXISTS offender_network (
     offender_b      VARCHAR(20) REFERENCES offenders(offender_id),
     shared_fir_id   VARCHAR(20),
     co_crime_count  INTEGER DEFAULT 1,
-    PRIMARY KEY (offender_a, offender_b, shared_fir_id)
+    PRIMARY KEY (offender_a, offender_b, shared_fir_id);
+
+-- =============================================================
+-- Missing tables & serial generator (Phase 0)
+-- =============================================================
+
+-- Inv_OccuranceTime (one‑to‑one with CaseMaster)
+CREATE TABLE IF NOT EXISTS Inv_OccuranceTime (
+    CaseMasterID        INT PRIMARY KEY,
+    CrimeRegisteredDate DATE NOT NULL,
+    OccurrenceFromDate  TIMESTAMP,
+    OccurrenceToDate    TIMESTAMP,
+    OccurrenceLocation  VARCHAR(500),
+    OccurrenceLatitude  DECIMAL(10,7),
+    OccurrenceLongitude DECIMAL(10,7),
+    FOREIGN KEY (CaseMasterID, CrimeRegisteredDate)
+        REFERENCES CaseMaster(CaseMasterID, CrimeRegisteredDate)
+);
+
+-- Junction table for ArrestSurrender ↔ Accused
+CREATE TABLE IF NOT EXISTS inv_arrestsurrenderaccused (
+    ArrestSurrenderID INT NOT NULL REFERENCES ArrestSurrender(ArrestSurrenderID),
+    AccusedMasterID   INT NOT NULL REFERENCES Accused(AccusedMasterID),
+    PRIMARY KEY (ArrestSurrenderID, AccusedMasterID)
+);
+
+-- CrimeNoSerial – tracks per‑station/category/year serials
+CREATE TABLE IF NOT EXISTS CrimeNoSerial (
+    PoliceStationID INT NOT NULL REFERENCES Unit(UnitID),
+    CaseCategoryCode INT NOT NULL,  -- 1=FIR,3=UDR,8=ZeroFIR,4=PAR
+    YearValue       INT NOT NULL,
+    LastSerial      INT NOT NULL DEFAULT 0,
+    PRIMARY KEY (PoliceStationID, CaseCategoryCode, YearValue)
+);
+
+-- Function to atomically get next CrimeNo and format it
+CREATE OR REPLACE FUNCTION get_next_crime_no(
+    p_station_id    INT,
+    p_district_id   INT,
+    p_category_code INT,
+    p_year          INT
+) RETURNS VARCHAR AS $$
+DECLARE
+    v_serial INT;
+    v_crime_no VARCHAR(18);
+BEGIN
+    INSERT INTO CrimeNoSerial (PoliceStationID, CaseCategoryCode, YearValue, LastSerial)
+    VALUES (p_station_id, p_category_code, p_year, 1)
+    ON CONFLICT (PoliceStationID, CaseCategoryCode, YearValue)
+    DO UPDATE SET LastSerial = CrimeNoSerial.LastSerial + 1
+    RETURNING LastSerial INTO v_serial;
+
+    v_crime_no := CONCAT(
+        p_category_code::TEXT,
+        LPAD(p_district_id::TEXT, 4, '0'),
+        LPAD(p_station_id::TEXT, 4, '0'),
+        p_year::TEXT,
+        LPAD(v_serial::TEXT, 5, '0')
+    );
+    RETURN v_crime_no;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =============================================================
+-- SECURITY & GRANTS FOR ksp_app (Phase 0)
+-- =============================================================
+-- Grant function execution to app user (SECURITY DEFINER already set)
+GRANT EXECUTE ON FUNCTION get_next_crime_no(INT, INT, INT, INT) TO ksp_app;
+
+-- Grant CRUD on CrimeNoSerial (needed for atomic serial updates)
+GRANT SELECT, INSERT, UPDATE ON CrimeNoSerial TO ksp_app;
+
+
 );
 -- Note: shared_fir_id cannot FK to fir_records because fir_records is partitioned
 -- and the PK is composite (fir_id, incident_ts). Application layer must validate.
