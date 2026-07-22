@@ -57,7 +57,8 @@ public class AuditLog {
     @Column(name = "result_count")
     private Integer resultCount;
 
-    @Column(name = "ip_address")
+    @Column(name = "ip_address", columnDefinition = "inet")
+    @JdbcTypeCode(SqlTypes.INET)
     private String ipAddress;
 
     @Column(name = "logged_at")

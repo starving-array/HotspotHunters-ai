@@ -21,7 +21,6 @@ public class CaseMasterRepositoryTest {
         CaseMaster cm = new CaseMaster();
         cm.setId(key);
         cm.setCrimeNo("123450001202400001");
-        cm.setCrimeRegisteredDate(key.getCrimeRegisteredDate());
         repository.save(cm);
         assertTrue(repository.findByCrimeNo("123450001202400001").isPresent());
     }

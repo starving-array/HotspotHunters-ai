@@ -12,7 +12,7 @@ const HotspotLeaderboard: React.FC = () => {
 
   const fetchHotspots = async () => {
     try {
-      const resp = await axios.get<Hotspot[]>('/api/v1/hotspots?limit=10');
+      const resp = await axios.get<Hotspot[]>('/api/v1/hotspots/live?limit=10');
       setHotspots(resp.data);
       setError(null);
     } catch (e: any) {

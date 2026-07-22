@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Java / Spring Boot
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Maven verify & test
+        working-directory: api
+        run: mvn -B verify
+
+      - name: Build API Docker image
+        working-directory: api
+        run: docker build -t ksp-intelligence-api:ci .
+
+      # Python / FastAPI
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install Python dependencies
+        working-directory: ml-service
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Python tests
+        working-directory: ml-service
+        run: pytest -q
+
+      - name: Build ML Service Docker image
+        working-directory: ml-service
+        run: docker build -t ksp-ml-service:ci .
+
+      # Frontend
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install frontend and build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            api/target/*.jar
+            ml-service/**/__pycache__/**
+            frontend/dist/**

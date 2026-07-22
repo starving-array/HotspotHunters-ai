@@ -1,20 +1,3 @@
-# =============================================================================
-# KSP Intelligence Portal — Docker Compose (Phase 0: Infrastructure only)
-# File: infra/docker-compose.yml
-#
-# Phase 0 brings up the 5 infrastructure services. Application services
-# (spring-boot-api, python-ml, react-frontend) are commented out and will be
-# uncommented in later phases once their code is built.
-#
-# All services communicate on the internal bridge network: ksp-network.
-# Only frontend (3000) and API (8080) are exposed to the host in later phases.
-#
-# Prerequisites:
-#   - Docker Desktop 4.30+ (Compose v2)
-#   - 8GB+ RAM allocated to Docker
-#   - .env file copied from .env.example
-# =============================================================================
-
 name: ksp-intelligence-portal
 
 networks:
@@ -28,12 +11,11 @@ volumes:
   kafka-data:
   zookeeper-data:
   zookeeper-logs:
+  prometheus-data:
+  grafana-data:
+  neo4j-data:
 
 services:
-
-  # ===========================================================================
-  # 1. Zookeeper — required by Kafka (traditional mode, per architecture doc)
-  # ===========================================================================
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.1
     container_name: ksp-zookeeper
@@ -54,9 +36,6 @@ services:
       start_period: 20s
     restart: unless-stopped
 
-  # ===========================================================================
-  # 2. Kafka — message broker, partitioned by district_code (30 partitions)
-  # ===========================================================================
   kafka:
     image: confluentinc/cp-kafka:7.6.1
     container_name: ksp-kafka
@@ -66,7 +45,7 @@ services:
         condition: service_healthy
     ports:
       - "9092:9092"
-      - "29092:29092"   # internal (for other containers)
+      - "29092:29092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -87,26 +66,20 @@ services:
       start_period: 30s
     restart: unless-stopped
 
-  # ===========================================================================
-  # 3. Kafka Init — one-shot container that creates topics after Kafka is ready
-  # ===========================================================================
-  kafka-init:
-    image: confluentinc/cp-kafka:7.6.1
-    container_name: ksp-kafka-init
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: ksp-kafka-ui
     networks: [ksp-network]
+    ports:
+      - "8081:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: ksp
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
     depends_on:
       kafka:
         condition: service_healthy
-    environment:
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-    entrypoint: ["/bin/bash", "/scripts/topics.sh"]
-    volumes:
-      - ./kafka/topics.sh:/scripts/topics.sh:ro
-    restart: "no"
+    restart: unless-stopped
 
-  # ===========================================================================
-  # 4. PostgreSQL — transactional source of truth, monthly-partitioned
-  # ===========================================================================
   postgres:
     image: postgres:16
     container_name: ksp-postgres
@@ -128,10 +101,6 @@ services:
       start_period: 20s
     restart: unless-stopped
 
-  # ===========================================================================
-  # 5. ElasticSearch — geospatial + full-text search index
-  #    Single-node, xpack security disabled for local dev (re-enable in Phase 6)
-  # ===========================================================================
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.14.0
     container_name: ksp-elasticsearch
@@ -159,9 +128,6 @@ services:
       start_period: 60s
     restart: unless-stopped
 
-  # ===========================================================================
-  # 6. Redis — Sorted Set leaderboard, Hash counters, Stream alerts, rate limit
-  # ===========================================================================
   redis:
     image: redis:7-alpine
     container_name: ksp-redis
@@ -179,37 +145,6 @@ services:
       start_period: 10s
     restart: unless-stopped
 
-  # ===========================================================================
-  # 6.5. Data Generator — Python image for bulk load + live Kafka producer.
-  #      NOT auto-started; use `docker compose run --rm data-generator <cmd>`.
-  #      Depends on Postgres + ES + Kafka healthy.
-  # ===========================================================================
-  data-generator:
-    build:
-      context: ../data-generator
-      dockerfile: Dockerfile
-    container_name: ksp-data-generator
-    networks: [ksp-network]
-    depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-      elasticsearch:
-        condition: service_healthy
-    env_file: ../.env
-    environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      ELASTICSEARCH_HOST: elasticsearch
-      ELASTICSEARCH_PORT: 9200
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-    profiles: ["tools"]    # no auto-start on `up`; opt-in via --profile tools
-    restart: "no"
-
-  # ===========================================================================
-  # 7. Spring Boot API — port 8080 (Phase 2: Kafka consumer pipeline)
-  # ===========================================================================
   spring-boot-api:
     build:
       context: ../api
@@ -221,8 +156,6 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
-      kafka-init:
-        condition: service_completed_successfully
       elasticsearch:
         condition: service_healthy
       redis:
@@ -232,16 +165,6 @@ services:
     env_file: ../.env
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
-      POSTGRES_URL: jdbc:postgresql://postgres:5432/ksp_intelligence
-      POSTGRES_DB: ksp_intelligence
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      ELASTICSEARCH_HOST: elasticsearch
-      ELASTICSEARCH_PORT: 9200
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      ML_SERVICE_URL: http://python-ml:8001
     healthcheck:
       test: ["CMD", "curl", "-fs", "http://localhost:8080/actuator/health"]
       interval: 15s
@@ -250,39 +173,99 @@ services:
       start_period: 60s
     restart: unless-stopped
 
-  # ===========================================================================
-  # 8. Python ML + LLM Service — port 8001 (UNCOMMENT IN PHASE 4)
-  # ===========================================================================
-  # python-ml:
-  #   build:
-  #     context: ../ml-service
-  #     dockerfile: Dockerfile
-  #   container_name: ksp-ml
-  #   networks: [ksp-network]
-  #   depends_on:
-  #     redis:
-  #       condition: service_healthy
-  #   ports:
-  #     - "8001:8001"
-  #   env_file: ../.env
-  #   environment:
-  #     REDIS_HOST: redis
-  #   restart: unless-stopped
+  python-ml:
+    build:
+      context: ../ml-service
+      dockerfile: Dockerfile
+    container_name: ksp-ml
+    networks: [ksp-network]
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "8001:8001"
+    env_file: ../.env
+    environment:
+      REDIS_HOST: redis
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8001/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
 
-  # ===========================================================================
-  # 9. React Frontend — port 3000 (UNCOMMENT IN PHASE 5)
-  # ===========================================================================
-  # react-frontend:
-  #   build:
-  #     context: ../frontend
-  #     dockerfile: Dockerfile
-  #   container_name: ksp-frontend
-  #   networks: [ksp-network]
-  #   depends_on:
-  #     spring-boot-api:
-  #       condition: service_healthy
-  #   ports:
-  #     - "3000:3000"
-  #   environment:
-  #     VITE_API_BASE_URL: http://localhost:8080
-  #   restart: unless-stopped
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: ksp-prometheus
+    networks: [ksp-network]
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      spring-boot-api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: ksp-grafana
+    networks: [ksp-network]
+    ports:
+      - "3001:3000"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_started
+    restart: unless-stopped
+
+  neo4j:
+    image: neo4j:5.20.0
+    container_name: ksp-neo4j
+    networks: [ksp-network]
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      NEO4J_AUTH: neo4j/changeme
+      NEO4J_PLUGINS: '["graph-data-science"]'
+      NEO4J_dbms_memory_pagecache_size: 512M
+      NEO4J_dbms_memory_heap_initial__size: 1G
+      NEO4J_dbms_memory_heap_max__size: 1G
+    volumes:
+      - neo4j-data:/data
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "changeme", "RETURN 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  react-frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: ksp-frontend
+    networks: [ksp-network]
+    depends_on:
+      spring-boot-api:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_URL: http://spring-boot-api:8080
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped

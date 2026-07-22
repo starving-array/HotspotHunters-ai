@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+
 type Alert = Record<string, any>;
 
 const LiveAlerts: React.FC = () => {
@@ -7,7 +9,7 @@ const LiveAlerts: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const source = new EventSource('/api/v1/alerts/stream');
+    const source = new EventSource(`${API_URL}/api/v1/alerts/stream`);
     source.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);

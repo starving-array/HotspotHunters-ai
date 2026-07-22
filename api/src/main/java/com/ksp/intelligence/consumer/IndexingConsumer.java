@@ -48,10 +48,10 @@ public class IndexingConsumer {
     private final ObjectMapper objectMapper;
 
     @Value("${ksp.elasticsearch.crime-index:crime-index}")
-    private String crimeIndex;
+    private String crimeIndex = "crime-index";
 
     @Value("${ksp.kafka.consumer-groups.indexing:indexing-service}")
-    private String groupId;
+    private String groupId = "indexing-service";
 
     public IndexingConsumer(FirRecordRepository firRepo,
                             ElasticsearchOperations es,

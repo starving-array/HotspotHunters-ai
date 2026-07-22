@@ -223,13 +223,13 @@ def load_to_elasticsearch(dataset: GeneratedDataset, es_url: str, es_index: str,
         raise RuntimeError(f"Cannot reach ElasticSearch at {es_url}: {e}") from e
 
     if mappings_path and os.path.exists(mappings_path):
-        with open(mappings_path, "r", encoding="utf-8") as fh:
+        with open(mappings_path, "r", encoding="utf-8-sig") as fh:
             mapping = json.load(fh)
     else:
         # Use the mappings.json committed at infra/elasticsearch/mappings.json
         default_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "infra", "elasticsearch", "mappings.json"))
         if os.path.exists(default_path):
-            with open(default_path, "r", encoding="utf-8") as fh:
+            with open(default_path, "r", encoding="utf-8-sig") as fh:
                 mapping = json.load(fh)
         else:
             mapping = None

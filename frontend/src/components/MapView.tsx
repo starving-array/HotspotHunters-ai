@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import axios from 'axios';
 
 // Default icon fix for Webpack/Vite
@@ -20,15 +21,36 @@ type FIRRecord = {
   longitude: number;
 };
 
+type SearchResponse = {
+  hits: Array<{
+    fir_id: string;
+    district: string;
+    crime_type: string;
+    location: { lat: number; lon: number };
+    incident_ts: string;
+    registered_ts: string;
+    status: string;
+  }>;
+  totalHits: number;
+};
+
 const MapView: React.FC = () => {
   const [records, setRecords] = useState<FIRRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Simple fetch of recent FIRs – this could later be replaced by a search call.
   const fetchRecent = async () => {
     try {
-      const resp = await axios.get<FIRRecord[]>('/api/v1/search?q=&lat=&lon=&radiusKm=5');
-      setRecords(resp.data);
+      const resp = await axios.get<SearchResponse>('/api/v1/search', {
+        params: { q: '', lat: '', lon: '', radiusKm: 5 },
+      });
+      const mapped = (resp.data.hits || []).map((h) => ({
+        fir_id: h.fir_id,
+        district: h.district,
+        crime_type: h.crime_type,
+        latitude: h.location?.lat ?? 0,
+        longitude: h.location?.lon ?? 0,
+      }));
+      setRecords(mapped);
       setError(null);
     } catch (e: any) {
       setError(e.message || 'Failed to load map data');
@@ -37,7 +59,7 @@ const MapView: React.FC = () => {
 
   useEffect(() => {
     fetchRecent();
-    const interval = setInterval(fetchRecent, 30_000); // refresh every 30 s
+    const interval = setInterval(fetchRecent, 30_000);
     return () => clearInterval(interval);
   }, []);
 

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import java.util.Map;
 import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -25,21 +26,15 @@ class AuditControllerTest {
 
     @Test
     void createAudit_persistsAndReturnsId() {
-        // Create request object via inner class reflection
-        AuditController.AuditRequest req = new AuditController.AuditRequest();
-        req.officerId = "O123";
-        req.actionType = "SEARCH";
-        req.endpointCalled = "/api/v1/search";
-        // Stub repository save to return entity with known UUID
-        UUID expected = UUID.randomUUID();
-        doAnswer(invocation -> {
-            AuditLog log = invocation.getArgument(0);
-            // use reflection to set private field if needed - constructor sets UUID automatically
-            return null;
-        }).when(repo).save(any(AuditLog.class));
-        UUID result = controller.createAudit(req);
+        Map<String, Object> body = Map.of(
+            "officerId", "O123",
+            "actionType", "SEARCH",
+            "endpointCalled", "/api/v1/search",
+            "queryText", "",
+            "ipAddress", "127.0.0.1"
+        );
+        UUID result = controller.createAudit(body);
         assertNotNull(result);
-        // Verify save called
         verify(repo).save(any(AuditLog.class));
     }
 }

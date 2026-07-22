@@ -5,7 +5,10 @@ import logging
 from typing import List, Optional
 
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
+from starlette.middleware.base import BaseHTTPMiddleware
+import time
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from pydantic import BaseModel, Field
 
 # Optional: load .env for local dev
@@ -16,6 +19,32 @@ except Exception:
     pass
 
 app = FastAPI(title="KSP ML Service", version="0.1.0")
+
+# Prometheus metrics for the ML service
+ml_requests_total = Counter(
+    "ml_requests_total",
+    "Total ML service requests",
+    ["endpoint", "method", "status"],
+)
+ml_requests_latency_seconds = Histogram(
+    "ml_requests_latency_seconds",
+    "Latency of ML service requests",
+    ["endpoint", "method"],
+)
+
+class MetricsMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        start = time.time()
+        response = await call_next(request)
+        elapsed = time.time() - start
+        endpoint = request.url.path
+        method = request.method
+        status = str(response.status_code)
+        ml_requests_total.labels(endpoint=endpoint, method=method, status=status).inc()
+        ml_requests_latency_seconds.labels(endpoint=endpoint, method=method).observe(elapsed)
+        return response
+
+app.add_middleware(MetricsMiddleware)
 
 logger = logging.getLogger("ml_service")
 logger.setLevel(logging.INFO)
@@ -306,6 +335,10 @@ def nl_translate(req: NLTranslateRequest):
         days_back=days,
         raw_text=req.query,
     )
+
+@app.get("/metrics")
+def metrics():
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 if __name__ == "__main__":
     import uvicorn

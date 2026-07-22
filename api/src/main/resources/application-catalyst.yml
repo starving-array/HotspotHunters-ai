@@ -1,0 +1,36 @@
+# Catalyst profile for KSP (identical to dev for now)
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/ksp_intelligence
+    username: ksp_app
+    password: ksp_password
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+ksp:
+  kafka:
+    bootstrap-servers: kafka:9092
+    topics:
+      fir-events: fir-events
+      alert-events: alert-events
+      audit-events: audit-events
+    consumer-groups:
+      indexing: indexing-service
+      aggregation: aggregation-service
+      anomaly: anomaly-service
+  redis:
+    host: redis
+    port: 6379
+  ml-service:
+    url: http://ml-service:8001
+  jwt:
+    secret: super-secret-jwt-key
+    access-expiry-minutes: 60
+    refresh-expiry-hours: 24
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
