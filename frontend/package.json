@@ -9,26 +9,36 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/react-virtual": "^3.14.8",
     "axios": "^1.7.2",
+    "framer-motion": "^12.42.2",
+    "jsdom": "^24.1.0",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^1.25.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-force-graph-2d": "^1.29.1",
     "react-leaflet": "^4.2.1",
-    "leaflet": "^1.9.4",
-    "jsdom": "^24.1.0"
+    "react-router-dom": "^7.18.1",
+    "recharts": "^3.10.0",
+    "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
-    "vitest": "^2.0.0",
-    "@testing-library/react": "^16.0.0",
     "@testing-library/jest-dom": "^6.5.0",
+    "@testing-library/react": "^16.0.0",
     "@testing-library/user-event": "^14.5.2",
     "@types/jest": "^29.5.12",
-    
+    "@types/jsdom": "^28.0.3",
+    "@types/leaflet": "^1.9.21",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "jsdom": "^24.1.0",
     "typescript": "^5.5.2",
     "vite": "^5.3.1",
-    "jsdom": "^24.1.0",
-    "@types/jsdom": "^28.0.3"
+    "vitest": "^2.0.0"
   }
 }

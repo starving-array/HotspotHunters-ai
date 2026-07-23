@@ -1,5 +1,14 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 
+// ============================================================
+// TODO(known-issues):
+//   S1 — Login flow has NO password. `login(uname)` only POSTs
+//        { username } → backend. Add pwd field + bcrypt check.
+//   S2 — JWT stored in localStorage — XSS token-theft risk.
+//        Migrate to httpOnly+Secure+SameSite=Strict cookies.
+// (See frontend_dev_plan_final.md §6 Security — deferred.)
+// ============================================================
+
 interface AuthState {
   token: string | null;
   username: string | null;

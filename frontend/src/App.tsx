@@ -1,51 +1,71 @@
-import React from 'react';
+import { lazy, Suspense } from 'react';
+import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import './api/axiosConfig';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import Login from './components/Login';
-import HotspotLeaderboard from './components/HotspotLeaderboard';
-import MapView from './components/MapView';
-import SearchBar from './components/SearchBar';
-import PredictionPanel from './components/PredictionPanel';
-import LiveAlerts from './components/LiveAlerts';
-import NLQueryBar from './components/NLQueryBar';
-import TrendPanel from './components/TrendPanel';
+import { AuthProvider } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
+import { ToastProvider } from './context/ToastContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import FullPageLoader from './components/FullPageLoader';
+import RouteGuard from './components/RouteGuard';
+import Layout from './components/Layout';
 
-const Dashboard: React.FC = () => {
-  const { username, logout } = useAuth();
+// Route-level code-splitting. Login ships in the main bundle
+// (first-paint critical). All other pages lazy-load.
+const Login = lazy(() => import('./pages/Login'));
+const Overview = lazy(() => import('./pages/Overview'));
+const OverviewMap = lazy(() => import('./pages/OverviewMap'));
+const Hotspots = lazy(() => import('./pages/Hotspots'));
+const NetworkGraph = lazy(() => import('./pages/NetworkGraph'));
+const Anomalies = lazy(() => import('./pages/Anomalies'));
+const Cybercrime = lazy(() => import('./pages/Cybercrime'));
+const Trends = lazy(() => import('./pages/Trends'));
+const FIRSearch = lazy(() => import('./pages/FIRSearch'));
+const IODashboard = lazy(() => import('./pages/IODashboard'));
+const AuditTrail = lazy(() => import('./pages/AuditTrail'));
+const Settings = lazy(() => import('./pages/Settings'));
+
+const router = createBrowserRouter([
+  {
+    path: '/login',
+    element: <Login />,
+  },
+  {
+    element: (
+      <RouteGuard>
+        <Layout />
+      </RouteGuard>
+    ),
+    children: [
+      { index: true, element: <Overview /> },
+      { path: 'map', element: <OverviewMap /> },
+      { path: 'hotspots', element: <Hotspots /> },
+      { path: 'network', element: <NetworkGraph /> },
+      { path: 'anomalies', element: <Anomalies /> },
+      { path: 'cybercrime', element: <Cybercrime /> },
+      { path: 'trends', element: <Trends /> },
+      { path: 'fir-search', element: <FIRSearch /> },
+      { path: 'io-dashboard', element: <IODashboard /> },
+      { path: 'audit', element: <AuditTrail /> },
+      { path: 'settings', element: <Settings /> },
+    ],
+  },
+  { path: '*', element: <Navigate to="/" replace /> },
+]);
+
+function App() {
   return (
-    <div className="app-container">
-      <header className="header">
-        <span>KSP Intelligence Dashboard</span>
-        <span style={{ fontSize: '0.8rem', marginLeft: 'auto' }}>
-          {username} <button onClick={logout} style={{ marginLeft: '0.5rem' }}>Sign Out</button>
-        </span>
-      </header>
-      <div className="content">
-        <aside className="sidebar">
-          <SearchBar />
-          <NLQueryBar />
-          <PredictionPanel />
-          <TrendPanel />
-          <HotspotLeaderboard />
-          <LiveAlerts />
-        </aside>
-        <section className="map-area">
-          <MapView />
-        </section>
-      </div>
-    </div>
+    <ErrorBoundary>
+      <LanguageProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <Suspense fallback={<FullPageLoader />}>
+              <RouterProvider router={router} />
+            </Suspense>
+          </ToastProvider>
+        </AuthProvider>
+      </LanguageProvider>
+    </ErrorBoundary>
   );
-};
-
-const AppInner: React.FC = () => {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <Dashboard /> : <Login />;
-};
-
-const App: React.FC = () => (
-  <AuthProvider>
-    <AppInner />
-  </AuthProvider>
-);
+}
 
 export default App;
