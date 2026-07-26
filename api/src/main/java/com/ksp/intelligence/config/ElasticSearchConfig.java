@@ -29,11 +29,3 @@ public class ElasticSearchConfig extends ElasticsearchConfiguration {
 }
 */
 
-    /**
-     * Convert either {@code http://elasticsearch:9200} or {@code https://...}
-     * to the {@code host:port} form that {@link ClientConfiguration#connectedTo} expects.
-     */
-    private String stripScheme(String uri) {
-        return uri.replaceFirst("^https?://", "");
-    }
-}
