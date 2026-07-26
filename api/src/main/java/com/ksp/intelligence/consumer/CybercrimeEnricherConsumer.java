@@ -5,6 +5,7 @@ import com.ksp.intelligence.model.domain.IndicatorType;
 import com.ksp.intelligence.service.OsintEnrichmentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
@@ -13,6 +14,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Component
+@ConditionalOnProperty(name = "ksp.kafka.enabled", havingValue = "true")
 public class CybercrimeEnricherConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(CybercrimeEnricherConsumer.class);
