@@ -30,6 +30,7 @@ frontend/.env.local
 
 # Docker
 *.log
+*.err
 
 # OS files
 .DS_Store
@@ -47,3 +48,4 @@ newfixed.md
 KSP_IMPLEMENTATION_AUDIT_REPORT.md
 UI_ksp_intelligence_portal/
 ignore/
+KSP Datathon 2026 _ Prototype Submission Template.pptx

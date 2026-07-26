@@ -1,8 +1,5 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo } from 'react';
 import type { Alert } from '../types';
-import { getInitialAlerts, subscribeAlerts } from '../api/alerts';
-
-const BUFFER_MAX = 100;
 
 const SEVERITY_STYLE: Record<
   Alert['severity'],
@@ -15,34 +12,47 @@ const SEVERITY_STYLE: Record<
 };
 
 function fmtRelative(ts: string): string {
-  const then = new Date(ts).getTime();
-  const diff = Date.now() - then;
+  const ms = new Date(ts).getTime();
+  if (Number.isNaN(ms)) return '--';
+  const diff = Date.now() - ms;
   const m = Math.floor(diff / 60000);
   if (m < 1) return 'just now';
-  if (m < 60) return `${m} mins ago`;
+  if (m < 60) return `${m}m ago`;
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}h ago`;
   const d = Math.floor(h / 24);
   return `${d}d ago`;
 }
 
+function fmtNum(n: number): string {
+  return n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}K` : String(n);
+}
+
+function zScoreStyle(z: number): string {
+  if (z >= 6) return 'text-error';
+  if (z >= 4) return 'text-tertiary';
+  if (z >= 2) return 'text-warning';
+  return 'text-primary';
+}
+
 interface FeedEntryProps {
   alert: Alert;
-  isNew: boolean;
+  isNew?: boolean;
 }
 
 const FeedEntry = memo(function FeedEntry({ alert, isNew }: FeedEntryProps) {
   const style = SEVERITY_STYLE[alert.severity] || SEVERITY_STYLE.low;
+  const hasAnomaly = alert.zScore != null;
   return (
     <div
-      className={`bg-surface-container-lowest border border-outline-variant/30 border-l-2 ${style.border} rounded p-3 hover:bg-surface-container-highest transition-colors cursor-pointer group`}
+      className={`bg-surface-container-lowest border border-outline-variant/30 border-l-2 ${style.border} rounded p-3 hover:bg-surface-container-highest transition-colors cursor-pointer group relative`}
     >
       <div className="flex justify-between items-start mb-1">
         <div className="flex gap-2 items-center">
           <span className={`text-[11px] font-semibold uppercase tracking-widest px-1.5 rounded ${style.chip}`}>
             {alert.severity === 'critical' || alert.severity === 'high' ? 'Heinous' : alert.crimeType}
           </span>
-          {alert.severity !== 'critical' && (
+          {(alert.severity === 'critical' || alert.severity === 'high') && alert.crimeType !== 'Heinous' && (
             <span className="text-[11px] font-semibold uppercase tracking-widest text-on-surface">
               {alert.crimeType}
             </span>
@@ -58,6 +68,22 @@ const FeedEntry = memo(function FeedEntry({ alert, isNew }: FeedEntryProps) {
       <div className="text-[11px] text-outline mt-1 font-mono">
         {alert.district}
       </div>
+      {hasAnomaly && (
+        <div className="flex items-center gap-2 mt-2 text-[11px] tabular-nums">
+          <span className={`font-semibold ${zScoreStyle(alert.zScore!)}`}>
+            z={alert.zScore!.toFixed(1)}
+          </span>
+          {alert.actual != null && alert.expected != null && (
+            <>
+              <span className="text-on-surface-variant">·</span>
+              <span className="text-on-surface-variant">
+                <span className="font-semibold text-on-surface">{fmtNum(alert.actual)}</span>
+                {' '}actual / {fmtNum(alert.expected)} expected
+              </span>
+            </>
+          )}
+        </div>
+      )}
       {isNew && (
         <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-primary animate-led-pulse" />
       )}
@@ -70,33 +96,8 @@ interface Props {
   unreadLabel?: string;
 }
 
-export default function LiveFIRFeed({ alerts: external, unreadLabel }: Props) {
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [unread, setUnread] = useState(0);
-
-  useEffect(() => {
-    let unsub = () => {};
-    getInitialAlerts().then((seed) => {
-      setAlerts(seed);
-      setUnread(seed.length);
-    });
-    unsub = subscribeAlerts((a) =>
-      setAlerts((prev) => [a, ...prev].slice(0, BUFFER_MAX)),
-    );
-    return () => unsub();
-  }, []);
-
-  const source = external ?? alerts;
-  const buffered = useMemo(() => source.slice(0, BUFFER_MAX), [source]);
-
-  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (idleTimer.current) clearTimeout(idleTimer.current);
-    idleTimer.current = setTimeout(() => setUnread(0), 3000);
-    return () => {
-      if (idleTimer.current) clearTimeout(idleTimer.current);
-    };
-  }, [buffered]);
+export default function LiveFIRFeed({ alerts = [], unreadLabel }: Props) {
+  const displayed = alerts.slice(0, 10);
 
   return (
     <section className="bg-surface-container/80 backdrop-blur-md border border-outline-variant rounded-lg flex flex-col flex-1 min-h-0 relative">
@@ -108,17 +109,17 @@ export default function LiveFIRFeed({ alerts: external, unreadLabel }: Props) {
           </h2>
         </div>
         <span className="text-[11px] font-semibold uppercase tracking-widest text-on-surface-variant bg-surface-variant px-2 py-0.5 rounded tabular-nums">
-          {unreadLabel ?? `${unread} unread`}
+           {unreadLabel ?? `${displayed.length} active`}
         </span>
       </div>
       <div className="flex-1 overflow-y-auto p-2 space-y-2">
-        {buffered.length === 0 && (
+        {displayed.length === 0 && (
           <div className="text-center py-8 text-outline text-sm">
             Waiting for live telemetry…
           </div>
         )}
-        {buffered.map((a, i) => (
-          <FeedEntry key={a.id} alert={a} isNew={i === 0 && unread > 0} />
+        {displayed.map((a, i) => (
+          <FeedEntry key={a.id} alert={a} isNew={i === 0 && displayed.length > 0} />
         ))}
       </div>
     </section>

@@ -1,5 +1,9 @@
 package com.ksp.intelligence.controller;
 
+// CATALYST: ElasticSearch-based search controller is disabled.
+// Replaced by PgSearchController using PostgreSQL native queries.
+// Uncomment for local Docker deployment with ElasticSearch.
+/*
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.GeoLocation;
 import co.elastic.clients.elasticsearch._types.LatLonGeoLocation;
@@ -93,3 +97,4 @@ public class SearchController {
         return search(q, null, null, null);
     }
 }
+*/

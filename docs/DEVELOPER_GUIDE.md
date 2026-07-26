@@ -101,6 +101,9 @@ api/
 │   │   ├── AlertStreamController.java     ← GET /alerts/stream (SSE)
 │   │   ├── PredictionController.java      ← POST /predict/hotspot, /predict/offender
 │   │   ├── NLQueryController.java         ← POST /nl/query
+│   │   ├── CaseDetailController.java       ← GET /cases/{caseMasterId}
+│   │   ├── CybercrimeController.java       ← GET /cyber/dashboard, /osint/lookup
+│   │   ├── DashboardController.java        ← GET /dashboard/kpis
 │   │   ├── AuditController.java           ← POST /audit, GET /audit/{id}
 │   │   └── GlobalExceptionHandler.java    ← @ControllerAdvice
 │   ├── consumer/
@@ -109,7 +112,8 @@ api/
 │   │   └── AnomalyConsumer.java           → spike detection → alert-events
 │   ├── service/
 │   │   ├── AnomalyDetectionService.java
-│   │   └── AlertPublisher.java
+│   │   ├── AlertPublisher.java
+│   │   ├── CaseDetailService.java         ← Native SQL query + Redis cache (12h TTL)
 │   ├── repository/
 │   │   ├── FirRecordRepository.java
 │   │   ├── OffenderRepository.java

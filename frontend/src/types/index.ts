@@ -55,6 +55,9 @@ export interface Alert {
   longitude: number;
   severity: Severity;
   timestamp: string;
+  zScore?: number;
+  expected?: number;
+  actual?: number;
 }
 
 export interface District {
@@ -96,7 +99,7 @@ export interface CyberAlert {
 }
 
 export interface AuditEvent {
-  id: number;
+  id: string;
   userId: string;
   action: AuditAction;
   resource: string;
@@ -139,6 +142,7 @@ export interface NetworkLink {
 export interface ShapFeature {
   feature: string;
   weight: number;
+  value?: number;
 }
 
 export interface Toast {
@@ -168,6 +172,22 @@ export interface SystemService {
   status: 'healthy' | 'degraded' | 'down';
 }
 
+export interface OsintResult {
+  indicatorType: string;
+  indicatorValue: string;
+  malicious: boolean;
+  confidence: string;
+  reports: number;
+  categories: string[];
+  tags: string[];
+  reputation: number;
+  source: string;
+  country?: string;
+  asn?: string;
+  enrichedAt: string;
+  error?: string;
+}
+
 export interface KPIData {
   label: string;
   value: string | number;
@@ -175,4 +195,82 @@ export interface KPIData {
   trend?: 'up' | 'down' | 'flat';
   icon?: 'fir' | 'active' | 'heinous' | 'clearance' | 'cyber' | 'fraud' | 'identity';
   severity?: Severity;
+}
+
+export interface HotspotDistrict {
+  rank: number;
+  name: string;
+  code: string;
+  cases: number;
+  trendPct: number;
+}
+
+export interface SystemHealthSummary {
+  services: SystemService[];
+  cpuPct: number;
+  ramGb: number;
+}
+
+// ============================================================
+// Case Detail / Investigation Panel
+// ============================================================
+
+export interface CaseIndicator {
+  indicator_id: number;
+  indicator_type: string;
+  indicator_value: string;
+  platform?: string;
+  first_seen: string;
+  last_seen: string;
+  is_active: boolean;
+}
+
+export interface RelatedCase {
+  case_master_id: number;
+  crime_no: string;
+  district_name: string;
+  status: string;
+  crime_major_head: string;
+}
+
+export interface TimelineEvent {
+  date: string;
+  action: string;
+  actor: string;
+  description: string;
+}
+
+export interface CaseDetail {
+  case_master_id: number;
+  crime_no: string;
+  case_no: string;
+  crime_registered_date: string;
+  case_category: string;
+  gravity_offence: string;
+  crime_major_head: string;
+  crime_minor_head: string;
+  case_status_name: string;
+  court_name: string;
+  district_name: string;
+  police_station_name: string;
+  police_person_name: string;
+  incident_from_date: string;
+  incident_to_date: string;
+  info_received_psdate: string;
+  latitude: number;
+  longitude: number;
+  brief_facts: string;
+  complainant_name: string;
+  suspect_name: string;
+  victim_name: string;
+  is_cybercrime: boolean;
+  primary_platform: string;
+  financial_loss: number;
+  cyber_severity: Severity;
+  indicators: CaseIndicator[];
+  chargesheet_date: string;
+  chargesheet_type: string;
+  timeline: TimelineEvent[];
+  related_cases: RelatedCase[];
+  last_updated: string;
 }

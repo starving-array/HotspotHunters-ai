@@ -259,11 +259,11 @@ services:
       spring-boot-api:
         condition: service_healthy
     ports:
-      - "3000:3000"
+      - "5173:5173"
     environment:
-      VITE_API_URL: http://spring-boot-api:8080
+      VITE_PROXY_TARGET: http://spring-boot-api:8080
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:5173"]
       interval: 15s
       timeout: 10s
       retries: 10

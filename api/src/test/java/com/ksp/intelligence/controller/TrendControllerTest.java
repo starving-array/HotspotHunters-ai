@@ -2,6 +2,7 @@ package com.ksp.intelligence.controller;
 
 import com.ksp.intelligence.model.FirRecord;
 import com.ksp.intelligence.repository.FirRecordRepository;
+import com.ksp.intelligence.service.TrendsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -16,12 +17,15 @@ class TrendControllerTest {
     @Mock
     private FirRecordRepository repo;
 
+    @Mock
+    private TrendsService trendsService;
+
     private TrendController controller;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        controller = new TrendController(repo);
+        controller = new TrendController(repo, trendsService);
     }
 
     @Test

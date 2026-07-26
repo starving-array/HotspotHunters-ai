@@ -1,0 +1,30 @@
+{
+  "defaults": {
+    "project": 1,
+    "env": 1
+  },
+  "actives": {
+    "project": 1,
+    "env": 1
+  },
+  "projects": [
+    {
+      "idx": 1,
+      "id": "56286000000020001",
+      "name": "KSP-Intelligence-Portal",
+      "domain": {
+        "id": "50044363626",
+        "name": "ksp-intelligence-portal-60078773588.development"
+      },
+      "timezone": "Asia/Kolkata",
+      "env": [
+        {
+          "idx": 1,
+          "id": "60078773588",
+          "name": "Development",
+          "type": 3
+        }
+      ]
+    }
+  ]
+}

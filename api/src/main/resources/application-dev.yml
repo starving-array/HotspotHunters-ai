@@ -20,6 +20,7 @@ ksp:
       indexing: indexing-service
       aggregation: aggregation-service
       anomaly: anomaly-service
+      enricher: enricher-service
   redis:
     host: ${REDIS_HOST:redis}
     port: ${REDIS_PORT:6379}
@@ -29,6 +30,9 @@ ksp:
     secret: ${JWT_SECRET:super-secret-jwt-key}
     access-expiry-minutes: ${JWT_ACCESS_EXPIRY_MINUTES:60}
     refresh-expiry-hours: ${JWT_REFRESH_EXPIRY_HOURS:24}
+osint:
+  mock-malicious-ratio: 0.3
+
 ml:
   service:
     base-url: ${ML_SERVICE_URL:http://ml-service:8001}
@@ -37,4 +41,4 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        include: health,info,prometheus,kafkaLag

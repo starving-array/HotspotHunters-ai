@@ -63,6 +63,8 @@ graph TD
 
 **Sample flow (GET /hotspots):** JWT validate → RateLimit check → `ZREVRANGE hotspots:live 0 9` → AuditInterceptor logs → JSON response.
 
+**Sample flow (GET /cases/{id}):** JWT validate → RateLimit check → `CaseDetailService` checks Redis cache → miss → native SQL query joins 13 tables → build `CaseDetailDto` → cache to Redis (12h TTL) → JSON response.
+
 ---
 
 ## 2.5 Data Flow Diagrams

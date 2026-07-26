@@ -56,11 +56,15 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install frontend and build
+      - name: Install frontend and test
         working-directory: frontend
         run: |
           npm ci
-          npm run build
+          npm test
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
 
       - name: Archive artifacts
         uses: actions/upload-artifact@v4

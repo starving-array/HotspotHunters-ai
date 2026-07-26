@@ -11,6 +11,8 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none     # schema is created by init.sql on postgres container
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     show-sql: false
     properties:
       hibernate:
@@ -30,33 +32,35 @@ spring:
       minimum-idle: 5
       connection-timeout: 30000
 
-  # ----- Kafka -----
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
-    consumer:
-      # Each consumer group is configured per-listener in @KafkaListener(groupId=...).
-      auto-offset-reset: earliest          # dev: re-consume existing topic on restart
-      enable-auto-commit: false            # manual ack to ensure idempotent consume
-      key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
-      properties:
-        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
-        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
-        spring.json.trusted.packages: "com.ksp.intelligence.*"
-        spring.json.use.type.headers: false    # we use concrete FirEventDto type on the listener
-        spring.json.value.default.type: com.ksp.intelligence.model.FirEventDto
-    listener:
-      ack-mode: manual_immediate           # commit each ack() call (per record)
-      concurrency: 3                        # 30-partition topic -> 3 threads per group
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+  # ----- Kafka (COMMENTED FOR CATALYST — replaced by EventIngestionController) -----
+  # kafka:
+  #   bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
+  #   consumer:
+  #     auto-offset-reset: earliest
+  #     enable-auto-commit: false
+  #     key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+  #     value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+  #     properties:
+  #       spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+  #       spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+  #       spring.json.trusted.packages: "com.ksp.intelligence.*"
+  #       spring.json.use.type.headers: false
+  #       spring.json.value.default.type: com.ksp.intelligence.model.FirEventDto
+  #   listener:
+  #     ack-mode: manual_immediate
+  #     concurrency: 3
+  #   producer:
+  #     key-serializer: org.apache.kafka.common.serialization.StringSerializer
+  #     value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+  #     properties:
+  #       enable.idempotence: true
+  #       acks: all
 
-  # ----- ElasticSearch -----
-  elasticsearch:
-    uris: ${ELASTICSEARCH_SCHEME:http}://${ELASTICSEARCH_HOST:elasticsearch}:${ELASTICSEARCH_PORT:9200}
-    connection-timeout: 10s
-    socket-timeout: 60s
+  # ----- ElasticSearch (COMMENTED FOR CATALYST — replaced by PG full-text search) -----
+  # elasticsearch:
+  #   uris: ${ELASTICSEARCH_SCHEME:http}://${ELASTICSEARCH_HOST:elasticsearch}:${ELASTICSEARCH_PORT:9200}
+  #   connection-timeout: 10s
+  #   socket-timeout: 60s
 
   # ----- Redis -----
   data:
@@ -72,15 +76,15 @@ spring:
 
 # ----- App-specific — topics, indexes, Redis keys -----
 ksp:
-  kafka:
-    fir-topic: ${KAFKA_FIR_TOPIC:fir-events}
-    alert-topic: ${KAFKA_ALERT_TOPIC:alert-events}
-    consumer-groups:
-      indexing:    indexing-service
-      aggregation: aggregation-service
-      anomaly:     anomaly-service
-  elasticsearch:
-    crime-index: ${ELASTICSEARCH_INDEX:crime-index}
+  # kafka:
+  #   fir-topic: ${KAFKA_FIR_TOPIC:fir-events}
+  #   alert-topic: ${KAFKA_ALERT_TOPIC:alert-events}
+  #   consumer-groups:
+  #     indexing:    indexing-service
+  #     aggregation: aggregation-service
+  #     anomaly:     anomaly-service
+  # elasticsearch:
+  #   crime-index: ${ELASTICSEARCH_INDEX:crime-index}
   redis:
     hotspots-key: "hotspots:live"
     district24h-prefix: "district:24h:"
@@ -94,12 +98,17 @@ ksp:
     spike-threshold-sigma: 2.0             # spike when current - mean > 2*sigma
     high-severity-sigma: 3.0               # publish HIGH above this many sigma
 
+# ----- ML Service -----
+ml:
+  service:
+    base-url: ${ML_SERVICE_URL:http://ml-service:8001}
+
 # ----- Actuator -----
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus
+        include: health,info,metrics,prometheus,kafkaLag
   endpoint:
     health:
       show-details: when-authorized

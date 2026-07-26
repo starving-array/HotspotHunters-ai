@@ -1,44 +1,48 @@
+import axios from 'axios';
 import type { AnomalyEvent } from '../types';
+
+const CONFIG_KEY = 'ksp_anomaly_config';
 
 export interface AnomalyConfig {
   zScoreThreshold: number;
   lookbackDays: number;
   minCrimeCount: number;
+  routing: {
+    dashboard: boolean;
+    email: boolean;
+    sms: boolean;
+  };
 }
 
-const STUB_ANOMALIES: AnomalyEvent[] = Array.from({ length: 30 }, (_, i) => {
-  const base = Math.sin(i * 1.2) * 1.5 + Math.random() * 0.8;
-  const day = new Date(2026, 6, 23 - i);
+function defaultConfig(): AnomalyConfig {
   return {
-    id: i + 1,
-    district: ['Bengaluru Urban', 'Mysuru', 'Kalaburagi', 'Dharwad', 'Dakshina Kannada'][i % 5],
-    zScore: parseFloat(base.toFixed(2)),
-    expected: parseFloat((20 + Math.sin(i * 0.5) * 5).toFixed(1)),
-    actual: parseFloat((20 + Math.sin(i * 0.5) * 5 + base * 3).toFixed(1)),
-    crimeType: ['Cyber Crime', 'Crimes Against Women', 'Property', 'Economic Offences'][i % 4],
-    timestamp: day.toISOString(),
+    zScoreThreshold: 2.0,
+    lookbackDays: 30,
+    minCrimeCount: 5,
+    routing: { dashboard: true, email: false, sms: false },
   };
-});
-
-const STUB_CONFIG: AnomalyConfig = {
-  zScoreThreshold: 2.0,
-  lookbackDays: 30,
-  minCrimeCount: 5,
-};
+}
 
 export async function getAnomalies(): Promise<AnomalyEvent[]> {
-  await new Promise((r) => setTimeout(r, 50));
-  return STUB_ANOMALIES;
+  const res = await axios.get('/api/v1/anomalies', { params: { limit: 200 } });
+  return (res.data as AnomalyEvent[]).map(a => ({
+    ...a,
+  }));
 }
 
 export async function getAnomalyConfig(): Promise<AnomalyConfig> {
-  await new Promise((r) => setTimeout(r, 20));
-  return STUB_CONFIG;
+  try {
+    const stored = localStorage.getItem(CONFIG_KEY);
+    if (stored) return JSON.parse(stored) as AnomalyConfig;
+  } catch {}
+  return defaultConfig();
 }
 
 export async function updateAnomalyConfig(
   config: Partial<AnomalyConfig>,
 ): Promise<AnomalyConfig> {
-  await new Promise((r) => setTimeout(r, 30));
-  return { ...STUB_CONFIG, ...config };
+  const current = await getAnomalyConfig();
+  const updated = { ...current, ...config };
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(updated));
+  return updated;
 }

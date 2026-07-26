@@ -1,29 +1,12 @@
 ﻿import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import type { Alert, KPIData } from '../types';
+import type { KPIData } from '../types';
 import LiveFIRFeed from '../components/LiveFIRFeed';
 import MapView from '../components/MapView';
 import HotspotLeaderboard from '../components/HotspotLeaderboard';
 import { useLanguage } from '../context/LanguageContext';
+import { useAlerts } from '../context/AlertContext';
 import { getKPIs } from '../api/dashboard';
-import { getInitialAlerts, subscribeAlerts } from '../api/alerts';
-
-const ALERT_BUFFER_MAX = 100;
-
-// Lightweight shared alert-store so LiveFIRFeed + MapView share ONE SSE stream.
-// (TODO(U3): lift this into an AlertContext so the Layout also pulls from it.)
-function useAlerts() {
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  useEffect(() => {
-    let unsub = () => {};
-    getInitialAlerts().then((seed) => setAlerts(seed));
-    unsub = subscribeAlerts((a) =>
-      setAlerts((prev) => [a, ...prev].slice(0, ALERT_BUFFER_MAX)),
-    );
-    return () => unsub();
-  }, []);
-  return alerts;
-}
 
 export default function Overview() {
   const { t } = useLanguage();
@@ -35,8 +18,8 @@ export default function Overview() {
   }, []);
 
   return (
-    <>
-      <header className="mb-6 animate-fade-in">
+    <div className="flex flex-col h-full min-h-0">
+      <header className="mb-6 animate-fade-in flex-shrink-0">
         <h1 className="text-[24px] font-semibold text-on-surface mb-1 tracking-tight">
           {t('overview')}
         </h1>
@@ -45,14 +28,14 @@ export default function Overview() {
         </p>
       </header>
 
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 flex-shrink-0">
         {kpis.map((kpi, i) => (
           <motion.div
             key={kpi.label}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.08, type: 'spring', stiffness: 240, damping: 28 }}
-            className="bg-surface-container/80 backdrop-blur-md border border-outline-variant/80 rounded-lg p-4 relative overflow-hidden group hover:bg-surface-container-high/50 transition-colors"
+            className="bg-surface-container/80 backdrop-blur-md border border-outline-variant/80 rounded-lg p-4 relative overflow-hidden group hover:bg-surface-container-high/50 transition-colors glow-card"
           >
             <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
             <div className="flex justify-between items-start mb-2">
@@ -62,7 +45,7 @@ export default function Overview() {
               {kpi.severity === 'critical' && (
                 <div className="w-2 h-2 rounded-full bg-error animate-led-pulse" />
               )}
-              {kpi.label === 'FIRs Today' && (
+              {kpi.label === 'FIRs Today' && kpi.severity !== 'critical' && (
                 <div className="w-2 h-2 rounded-full bg-primary animate-led-pulse" />
               )}
               {kpi.label === 'Active Cases' && (
@@ -72,8 +55,8 @@ export default function Overview() {
               )}
             </div>
             <div
-              className={`font-mono text-[52px] leading-none font-semibold mb-2 tabular-nums ${
-                kpi.severity === 'critical' ? 'text-error' : kpi.trend === 'down' ? 'text-on-surface' : 'text-on-surface'
+              className={`font-mono text-[48px] leading-none font-semibold mb-2 tabular-nums tracking-tight ${
+                kpi.severity === 'critical' ? 'text-error' : 'text-on-surface'
               }`}
             >
               {kpi.value}
@@ -84,7 +67,7 @@ export default function Overview() {
                   kpi.trend === 'up' ? 'text-success' : kpi.trend === 'down' ? 'text-error' : 'text-on-surface-variant'
                 }`}
               >
-                {kpi.trend === 'up' ? '▲' : kpi.trend === 'down' ? '▼' : '→'} {kpi.delta}
+                {kpi.trend === 'up' ? '\u25B2' : kpi.trend === 'down' ? '\u25BC' : '\u2192'} {kpi.delta}
               </div>
             )}
             {kpi.label === 'Active Cases' && (
@@ -105,18 +88,19 @@ export default function Overview() {
         ))}
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[62%_38%] gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[66%_34%] gap-4 flex-1 min-h-0">
         <motion.div
+          className="min-h-0"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, type: 'spring', stiffness: 240, damping: 28 }}
         >
-          <MapView alerts={alerts} heightClass="h-[600px]" showLayerPanel={false} />
+          <MapView alerts={alerts} showLayerPanel={false} />
         </motion.div>
 
-        <div className="flex flex-col gap-4 h-[600px]">
+        <div className="flex flex-col min-h-0 gap-2">
           <motion.div
-            className="flex-1 min-h-0"
+            className="flex-[6] min-h-0 flex flex-col"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, type: 'spring', stiffness: 240, damping: 28 }}
@@ -124,7 +108,7 @@ export default function Overview() {
             <LiveFIRFeed alerts={alerts} />
           </motion.div>
           <motion.div
-            className="h-[260px]"
+            className="flex-[3.5] min-h-0 flex flex-col"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, type: 'spring', stiffness: 240, damping: 28 }}
@@ -133,6 +117,6 @@ export default function Overview() {
           </motion.div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

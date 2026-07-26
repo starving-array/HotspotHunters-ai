@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import './api/axiosConfig';
 import { AuthProvider } from './context/AuthContext';
+import { AlertProvider } from './context/AlertContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { ToastProvider } from './context/ToastContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -23,6 +24,7 @@ const FIRSearch = lazy(() => import('./pages/FIRSearch'));
 const IODashboard = lazy(() => import('./pages/IODashboard'));
 const AuditTrail = lazy(() => import('./pages/AuditTrail'));
 const Settings = lazy(() => import('./pages/Settings'));
+const CaseDetail = lazy(() => import('./pages/CaseDetail'));
 
 const router = createBrowserRouter([
   {
@@ -47,6 +49,7 @@ const router = createBrowserRouter([
       { path: 'io-dashboard', element: <IODashboard /> },
       { path: 'audit', element: <AuditTrail /> },
       { path: 'settings', element: <Settings /> },
+      { path: 'cases/:id', element: <CaseDetail /> },
     ],
   },
   { path: '*', element: <Navigate to="/" replace /> },
@@ -56,13 +59,15 @@ function App() {
   return (
     <ErrorBoundary>
       <LanguageProvider>
-        <AuthProvider>
-          <ToastProvider>
-            <Suspense fallback={<FullPageLoader />}>
-              <RouterProvider router={router} />
-            </Suspense>
-          </ToastProvider>
-        </AuthProvider>
+          <AuthProvider>
+            <AlertProvider>
+              <ToastProvider>
+                <Suspense fallback={<FullPageLoader />}>
+                  <RouterProvider router={router} />
+                </Suspense>
+              </ToastProvider>
+            </AlertProvider>
+          </AuthProvider>
       </LanguageProvider>
     </ErrorBoundary>
   );

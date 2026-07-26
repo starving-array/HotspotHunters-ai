@@ -168,15 +168,15 @@ class AggregationConsumerIT {
     }
 
     @Test
-    @DisplayName("ZINCRBY is cumulative — re-playing the same event increments again")
-    void liveRedis_zincrbyIsCumulative() {
+    @DisplayName("Idempotent — re-playing the same FIR is skipped (SETNX dedup)")
+    void liveRedis_replayIsIdempotent() {
         RedisKeysProperties keys = itestKeys();
-        String district = "ITEST_REPLAY_" + UUID.randomUUID().toString().substring(0, 8);
+        String district = "ITEST_IDEMP_" + UUID.randomUUID().toString().substring(0, 8);
 
         AggregationConsumer consumer = new AggregationConsumer(redis, keys);
 
         FirEventDto dto = FirEventDto.builder()
-                .firId("FIR_REPLAY_" + UUID.randomUUID())
+                .firId("FIR_IDEMP_" + UUID.randomUUID())
                 .stationCode("STTEST001")
                 .districtCode(district)
                 .talukCode(district + "_001")
@@ -193,6 +193,7 @@ class AggregationConsumerIT {
                 new ConsumerRecord<>("fir-events", 0, 0L, dto.getDistrictCode(), dto), () -> {});
         Double score1 = redis.opsForZSet().score(keys.getHotspotsKey(), district);
 
+        // Replay same FIR — should be idempotently skipped
         consumer.onFirEvent(
                 new ConsumerRecord<>("fir-events", 0, 1L, dto.getDistrictCode(), dto), () -> {});
         Double score2 = redis.opsForZSet().score(keys.getHotspotsKey(), district);
@@ -200,20 +201,20 @@ class AggregationConsumerIT {
         assertThat(score1).isNotNull();
         assertThat(score2).isNotNull();
         assertThat(score2)
-                .as("replaying the same event twice → score += 2 (aggregation counter, not deduplicated)")
-                .isEqualTo(score1 + 1.0);
+                .as("replaying the same event is skipped via SETNX idempotency guard")
+                .isEqualTo(score1);
     }
 
     @Test
-    @DisplayName("TTL is re-armed on each write (EXPIRE 25h reset per event)")
+    @DisplayName("TTL is re-armed on each new event (EXPIRE 25h reset per distinct FIR)")
     void liveRedis_ttlRenewed() throws InterruptedException {
         RedisKeysProperties keys = itestKeys();
         String district = "ITEST_TTL_" + UUID.randomUUID().toString().substring(0, 8);
 
         AggregationConsumer consumer = new AggregationConsumer(redis, keys);
 
-        FirEventDto dto = FirEventDto.builder()
-                .firId("FIR_TTL_" + UUID.randomUUID())
+        FirEventDto dto1 = FirEventDto.builder()
+                .firId("FIR_TTL_1_" + UUID.randomUUID())
                 .stationCode("STTEST001")
                 .districtCode(district)
                 .talukCode(district + "_001")
@@ -222,23 +223,38 @@ class AggregationConsumerIT {
                 .longitude(78.0)
                 .incidentTs(Instant.now())
                 .registeredTs(Instant.now())
-                .modusOperandi("ttl_test")
+                .modusOperandi("ttl_test1")
                 .status("OPEN")
                 .build();
 
         consumer.onFirEvent(
-                new ConsumerRecord<>("fir-events", 0, 0L, dto.getDistrictCode(), dto), () -> {});
+                new ConsumerRecord<>("fir-events", 0, 0L, dto1.getDistrictCode(), dto1), () -> {});
         String hashKey = keys.getDistrict24hPrefix() + district;
         Long ttl = redis.getExpire(hashKey);
         assertThat(ttl).as("TTL should be positive after write").isPositive();
 
         Thread.sleep(1_500);
 
+        // Distinct FIR ID — should NOT be deduplicated
+        FirEventDto dto2 = FirEventDto.builder()
+                .firId("FIR_TTL_2_" + UUID.randomUUID())
+                .stationCode("STTEST002")
+                .districtCode(district)
+                .talukCode(district + "_001")
+                .crimeType("burglary")
+                .latitude(13.0)
+                .longitude(78.0)
+                .incidentTs(Instant.now())
+                .registeredTs(Instant.now())
+                .modusOperandi("ttl_test2")
+                .status("OPEN")
+                .build();
+
         consumer.onFirEvent(
-                new ConsumerRecord<>("fir-events", 0, 1L, dto.getDistrictCode(), dto), () -> {});
+                new ConsumerRecord<>("fir-events", 0, 1L, dto2.getDistrictCode(), dto2), () -> {});
         Long ttl2 = redis.getExpire(hashKey);
         assertThat(ttl2)
-                .as("TTL re-armed, should be close to 25h (~90000s) not degraded by 1.5s wait")
+                .as("TTL re-armed, should be close to 25h (~90000s) not degraded by 2s wait")
                 .isBetween(Duration.ofHours(24).toSeconds(), Duration.ofHours(25).toSeconds());
     }
 }

@@ -20,7 +20,7 @@ public class AlertStreamController {
 
     private final StringRedisTemplate redis;
     private final RedisKeysProperties keys;
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final ExecutorService executor = Executors.newCachedThreadPool();
 
     public AlertStreamController(StringRedisTemplate redis, RedisKeysProperties keys) {
         this.redis = redis;

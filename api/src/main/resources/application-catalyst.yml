@@ -3,7 +3,7 @@ spring:
   datasource:
     url: jdbc:postgresql://postgres:5432/ksp_intelligence
     username: ksp_app
-    password: ksp_password
+    password: ${POSTGRES_PASSWORD:changeme}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -26,11 +26,11 @@ ksp:
   ml-service:
     url: http://ml-service:8001
   jwt:
-    secret: super-secret-jwt-key
+    secret: ${JWT_SECRET:ChangeMeSecret}
     access-expiry-minutes: 60
     refresh-expiry-hours: 24
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        include: health,info,prometheus,kafkaLag

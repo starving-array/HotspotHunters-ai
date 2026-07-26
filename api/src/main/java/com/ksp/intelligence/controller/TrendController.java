@@ -1,7 +1,9 @@
 package com.ksp.intelligence.controller;
 
+import com.ksp.intelligence.dto.TrendsDataDto;
 import com.ksp.intelligence.model.FirRecord;
 import com.ksp.intelligence.repository.FirRecordRepository;
+import com.ksp.intelligence.service.TrendsService;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,9 +19,11 @@ import java.util.*;
 public class TrendController {
 
     private final FirRecordRepository firRepo;
+    private final TrendsService trendsService;
 
-    public TrendController(FirRecordRepository firRepo) {
+    public TrendController(FirRecordRepository firRepo, TrendsService trendsService) {
         this.firRepo = firRepo;
+        this.trendsService = trendsService;
     }
 
     /**
@@ -54,8 +58,13 @@ public class TrendController {
         return result;
     }
 
+    @GetMapping(value = "/api/v1/trends/overview", produces = MediaType.APPLICATION_JSON_VALUE)
+    public TrendsDataDto getTrendsOverview() {
+        return trendsService.getTrends();
+    }
+
     /**
-     * Compare trends across multiple districts.
+     * Compare trends across multiple districts — single batch query.
      *
      * @param districts comma‑separated district codes (e.g. "01,02,03")
      * @param months optional months back (default 12)
@@ -65,16 +74,32 @@ public class TrendController {
     public List<Map<String, Object>> compareTrends(
             @RequestParam(value = "districts") String districts,
             @RequestParam(value = "months", defaultValue = "12") int months) {
-        String[] districtArray = districts.split(",");
+        if (months < 1) months = 1;
+        Instant end = Instant.now();
+        Instant start = end.minusSeconds(months * 30L * 24 * 60 * 60);
+
+        List<String> districtCodes = Arrays.stream(districts.split(","))
+                .map(String::trim).toList();
+        List<FirRecord> records = firRepo.findByDistrictCodeInAndIncidentTsBetween(districtCodes, start, end);
+
+        // Group by (district, YearMonth)
+        Map<String, Map<YearMonth, Long>> grouped = new HashMap<>();
+        for (FirRecord r : records) {
+            YearMonth ym = YearMonth.from(r.getIncidentTs().atZone(ZoneOffset.UTC));
+            grouped.computeIfAbsent(r.getDistrictCode(), k -> new HashMap<>())
+                    .merge(ym, 1L, Long::sum);
+        }
+
         List<Map<String, Object>> result = new ArrayList<>();
-        for (String district : districtArray) {
-            List<Map<String, Object>> trend = getTrend(district.trim(), months);
-            for (Map<String, Object> entry : trend) {
-                Map<String, Object> combined = new HashMap<>(entry);
-                combined.put("district", district.trim());
-                result.add(combined);
+        for (String dc : districtCodes) {
+            Map<YearMonth, Long> byMonth = grouped.getOrDefault(dc, Map.of());
+            for (int i = 0; i < months; i++) {
+                YearMonth ym = YearMonth.now().minusMonths(i);
+                result.add(Map.of("district", dc, "month", ym.toString(), "count", byMonth.getOrDefault(ym, 0L)));
             }
         }
+        result.sort(Comparator.<Map<String, Object>, String>comparing(m -> (String) m.get("month"))
+                .thenComparing(m -> (String) m.get("district")));
         return result;
     }
 }

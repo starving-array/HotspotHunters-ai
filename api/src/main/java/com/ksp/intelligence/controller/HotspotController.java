@@ -1,5 +1,7 @@
 package com.ksp.intelligence.controller;
 
+import com.ksp.intelligence.dto.HotspotDetailDto;
+import com.ksp.intelligence.service.HotspotService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
@@ -10,13 +12,16 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 public class HotspotController {
 
     private final StringRedisTemplate redisTemplate;
+    private final HotspotService hotspotService;
 
     @Value("${ksp.redis.keys.hotspots-live:hotspots:live}")
     private String hotspotsKey;
@@ -24,16 +29,11 @@ public class HotspotController {
     @Value("${ksp.redis.keys.district-names:district:names}")
     private String districtNamesKey;
 
-    public HotspotController(StringRedisTemplate redisTemplate) {
+    public HotspotController(StringRedisTemplate redisTemplate, HotspotService hotspotService) {
         this.redisTemplate = redisTemplate;
+        this.hotspotService = hotspotService;
     }
 
-    /**
-     * Returns the top N districts from the live leaderboard sorted set.
-     *
-     * @param limit number of districts to return (default 10, max 100)
-     * @return list of maps { "district": String, "score": Double }
-     */
     @GetMapping(value = "/api/v1/hotspots/live", produces = MediaType.APPLICATION_JSON_VALUE)
     public List<Map<String, Object>> getHotspots(@RequestParam(value = "limit", defaultValue = "10") int limit) {
         if (limit < 1) limit = 1;
@@ -50,12 +50,6 @@ public class HotspotController {
         return result;
     }
 
-    /**
-     * Returns a breakdown for a specific district – its name and current score.
-     *
-     * @param districtId the district identifier (Redis member value)
-     * @return map { "districtId": "...", "districtName": "...", "score": ... }
-     */
     @GetMapping(value = "/api/v1/hotspots/breakdown/{districtId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public Map<String, Object> getHotspotBreakdown(@PathVariable String districtId) {
         Double score = redisTemplate.opsForZSet().score(hotspotsKey, districtId);
@@ -65,5 +59,19 @@ public class HotspotController {
                 "districtName", name != null ? name : "",
                 "score", score != null ? score : 0.0
         );
+    }
+
+    @GetMapping(value = "/api/v1/hotspots/detail", produces = MediaType.APPLICATION_JSON_VALUE)
+    public HotspotDetailDto getHotspotDetail(@RequestParam("district") String districtCode) {
+        return hotspotService.getDistrictDetail(districtCode);
+    }
+
+    @GetMapping(value = "/api/v1/hotspots/trends", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Map<String, Double> getHotspotTrends(@RequestParam("districts") String districts) {
+        List<String> codes = Arrays.stream(districts.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
+        return hotspotService.getHotspotTrends(codes);
     }
 }

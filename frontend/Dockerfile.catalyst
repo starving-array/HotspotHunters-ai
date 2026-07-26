@@ -1,0 +1,21 @@
+# Catalyst AppSail Dockerfile for React Frontend
+# Build: docker build --platform linux/amd64 -t ksp-frontend -f Dockerfile.catalyst .
+# Deploy: catalyst deploy appsail --name ksp-frontend --source docker://ksp-frontend:latest --port 9000
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --silent
+COPY vite.config.mts tsconfig*.json index.html ./
+COPY src/ ./src/
+COPY public/ ./public/
+RUN npm run build
+
+FROM node:20-alpine
+WORKDIR /app
+COPY --from=builder /app/dist ./dist
+RUN npm init -y > /dev/null 2>&1
+RUN npm install express
+
+COPY server.js ./server.js
+EXPOSE 9000
+CMD ["node", "server.js"]

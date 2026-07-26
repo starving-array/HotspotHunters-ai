@@ -146,13 +146,21 @@ Authorization: Bearer <JWT_TOKEN>
 | POST | `/api/v1/auth/login` | Public | Login with username/password, returns JWT |
 | GET | `/api/v1/hotspots?limit=N` | ANALYST+ | Top N districts from Redis Sorted Set (default 10, max 100) |
 | GET | `/api/v1/search?q=&lat=&lon=&radiusKm=` | ANALYST+ | Keyword + optional geo-distance search on ElasticSearch (max 20 results) |
+| GET | `/api/v1/fir-search?q=` | ANALYST+ | Natural-language FIR search with NL parsing |
+| GET | `/api/v1/cases/{caseMasterId}` | ANALYST+ | Full case detail — joins 13 tables, includes timeline, related cases, indicators |
 | GET | `/api/v1/trends/{districtCode}?months=M` | ANALYST+ | Monthly incident counts per district from PostgreSQL |
+| GET | `/api/v1/alerts` | ANALYST+ | Alert history paginated |
 | GET | `/api/v1/alerts/stream` | ANALYST+ | Server-Sent Events live alert feed from Redis Stream |
+| GET | `/api/v1/anomalies` | ANALYST+ | Z-score anomaly detection events |
+| GET | `/api/v1/cyber/dashboard` | ANALYST+ | Cybercrime KPIs and pattern alerts |
+| GET | `/api/v1/network/graph` | ANALYST+ | Offender co-crime network graph |
 | POST | `/api/v1/nl/query` | ANALYST+ | Natural-language query → LLM translation → structured ES params |
 | POST | `/api/v1/predict/hotspot` | ANALYST+ | 7-day taluk risk prediction (Random Forest) |
 | POST | `/api/v1/predict/offender` | ANALYST+ | Offender recidivism risk score (Gradient Boosting + SHAP) |
 | POST | `/api/v1/audit` | SUPERVISOR+ | Manually append an audit-log entry |
 | GET | `/api/v1/audit/{id}` | ADMIN | Retrieve a specific audit-log entry by UUID |
+| GET | `/api/v1/dashboard/kpis` | ADMIN | Dashboard KPI cards |
+| GET | `/api/v1/io/dashboard` | ANALYST+ | IO dashboard — officer analytics |
 
 ---
 

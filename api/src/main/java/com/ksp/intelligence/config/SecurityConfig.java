@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -31,11 +32,16 @@ public class SecurityConfig implements WebMvcConfigurer {
     public SecurityConfig(JwtTokenProvider tokenProvider,
                           RateLimitingInterceptor rateLimitingInterceptor,
                           AuditInterceptor auditInterceptor,
-                          @Value("${FRONTEND_URL:http://localhost:3000}") String frontendUrl) {
+                          @Value("${FRONTEND_URL:http://localhost:5173}") String frontendUrl) {
         this.tokenProvider = tokenProvider;
         this.rateLimitingInterceptor = rateLimitingInterceptor;
         this.auditInterceptor = auditInterceptor;
         this.frontendUrl = frontendUrl;
+    }
+
+    @Bean
+    public BCryptPasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
@@ -60,6 +66,7 @@ public class SecurityConfig implements WebMvcConfigurer {
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/auth/**", "/api/v1/alerts/stream", "/actuator/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/**").authenticated()
                 .anyRequest().permitAll()
             )

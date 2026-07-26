@@ -13,8 +13,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.kafka.support.Acknowledgment;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 
@@ -37,6 +40,8 @@ class AnomalyConsumerTest {
     @Mock private AnomalyDetectionService anomalyService;
     @Mock private AlertPublisher alertPublisher;
     @Mock private Acknowledgment ack;
+    @Mock private StringRedisTemplate redis;
+    @Mock private ValueOperations<String, String> valueOps;
 
     private AnomalyProperties props;
     private AnomalyConsumer consumer;
@@ -45,10 +50,12 @@ class AnomalyConsumerTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(redis.opsForValue()).thenReturn(valueOps);
+        lenient().when(valueOps.setIfAbsent(anyString(), anyString(), any(Duration.class))).thenReturn(true);
         props = new AnomalyProperties();
         props.setSpikeThresholdSigma(2.0);
         props.setHighSeveritySigma(3.0);
-        consumer = new AnomalyConsumer(anomalyService, alertPublisher, props);
+        consumer = new AnomalyConsumer(anomalyService, alertPublisher, props, redis);
 
         sampleDto = FirEventDto.builder()
                 .firId("FIR_001")

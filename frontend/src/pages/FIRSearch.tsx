@@ -1,6 +1,7 @@
 ﻿import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Mic, X, FileText, MapPin, Calendar, Shield, DollarSign, Sparkles } from 'lucide-react';
+import { Search, Mic, X, FileText, MapPin, Calendar, Shield, DollarSign, Sparkles, ArrowRight } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { FIRSearchResult, FIRDetail, ParsedQuery } from '../api/firSearch';
 import { searchFIR, getFIRDetail } from '../api/firSearch';
@@ -62,10 +63,14 @@ const Row = memo(function Row({
 
 function DetailDrawer({
   detail,
+  caseId,
   onClose,
+  onInvestigate,
 }: {
   detail: FIRDetail | null;
+  caseId: number | null;
   onClose: () => void;
+  onInvestigate: (caseMasterId: number) => void;
 }) {
   const { t } = useLanguage();
   return (
@@ -148,6 +153,16 @@ function DetailDrawer({
               <span className="text-[13px] font-mono text-tertiary font-semibold">{detail.status}</span>
             </div>
           </div>
+
+          <div className="p-4 border-t border-outline-variant/30 shrink-0">
+            <button
+              onClick={() => onInvestigate(caseId!)}
+              className="w-full h-9 bg-primary/10 border border-primary/30 rounded-lg text-[11px] font-semibold uppercase tracking-widest text-primary hover:bg-primary/20 transition-colors flex items-center justify-center gap-2"
+            >
+              Full Investigation Panel
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </motion.aside>
       )}
     </AnimatePresence>
@@ -205,6 +220,7 @@ function TransparencyPanel({ parsed }: { parsed: ParsedQuery | null }) {
 
 export default function FIRIntelligenceSearchPage() {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<FIRSearchResult[]>([]);
   const [parsed, setParsed] = useState<ParsedQuery | null>(null);
@@ -326,7 +342,9 @@ export default function FIRIntelligenceSearchPage() {
 
         <DetailDrawer
           detail={selectedDetail}
+          caseId={selectedId}
           onClose={() => setSelectedId(null)}
+          onInvestigate={(id) => navigate(`/cases/${id}`)}
         />
       </div>
     </div>
