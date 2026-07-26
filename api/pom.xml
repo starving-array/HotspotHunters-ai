@@ -54,21 +54,17 @@
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
 
-        <!-- ElasticSearch client (Spring Data ES wraps the Java ES client) COMMENTED FOR CATALYST -->
-        <!--
+        <!-- ElasticSearch client (Spring Data ES wraps the Java ES client) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
         </dependency>
-        -->
 
-        <!-- Kafka - COMMENTED FOR CATALYST -->
-        <!--
+        <!-- Kafka -->
         <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
         </dependency>
-        -->
 
         <!-- WebFlux WebClient (used by Phase 4 for outbound ML service calls) -->
         <dependency>
