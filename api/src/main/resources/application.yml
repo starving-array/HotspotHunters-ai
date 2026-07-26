@@ -4,6 +4,8 @@
 # =============================================================================
 
 spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
   application:
     name: ksp-intelligence-api
 

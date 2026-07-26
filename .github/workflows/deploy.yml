@@ -6,6 +6,8 @@ on:
 
 jobs:
   test-and-build:
+    env:
+      SPRING_PROFILES_ACTIVE: prod
     if: "!contains(github.event.head_commit.message, '[skip-deploy]')"
     runs-on: ubuntu-latest
     steps:
@@ -13,6 +15,7 @@ jobs:
 
       # --- API: Java + Maven ---
       - name: Set up JDK 17
+
         uses: actions/setup-java@v4
         with:
           distribution: temurin
