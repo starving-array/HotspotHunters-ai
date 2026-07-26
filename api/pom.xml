@@ -54,21 +54,17 @@
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
 
-        <!-- ElasticSearch client (Spring Data ES wraps the Java ES client) COMMENTED FOR CATALYST -->
-        <!--
+        <!-- ElasticSearch client (Spring Data ES wraps the Java ES client) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
         </dependency>
-        -->
 
-        <!-- Kafka -- COMMENTED FOR CATALYST -->
-        <!--
+        <!-- Kafka -->
         <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
         </dependency>
-        -->
 
         <!-- WebFlux WebClient (used by Phase 4 for outbound ML service calls) -->
         <dependency>
@@ -105,7 +101,7 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Testcontainers for integration tests (Postgres / Redis / Kafka / ES) -- COMMENTED FOR CATALYST -->
+        <!-- Testcontainers for integration tests (Postgres / Redis / Kafka / ES) - COMMENTED FOR CATALYST -->
         <!--
         <dependency>
             <groupId>org.testcontainers</groupId>
@@ -133,7 +129,7 @@
             <scope>test</scope>
         </dependency>
         -->
-        <!-- Compose integration via Testcontainers (uses docker-compose file for tests) -- COMMENTED FOR CATALYST -->
+        <!-- Compose integration via Testcontainers (uses docker-compose file for tests) - COMMENTED FOR CATALYST -->
         <!--
         <dependency>
             <groupId>com.redis</groupId>

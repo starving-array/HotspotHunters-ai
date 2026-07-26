@@ -1,13 +1,18 @@
 package com.ksp.intelligence;
 
-import com.ksp.intelligence.config.ElasticSearchConfig;
-import com.ksp.intelligence.config.KafkaConsumerConfig;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
+
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.FilterType;
+import org.junit.jupiter.api.BeforeEach;
+import static org.mockito.Mockito.*;
+import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.data.redis.core.HashOperations;
+import org.springframework.data.redis.core.StreamOperations;
+
+
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.TestPropertySource;
 
@@ -24,10 +29,7 @@ import org.springframework.test.context.TestPropertySource;
  * Uses H2 as a lightweight datasource instead of real PostgreSQL.
  */
 @SpringBootTest
-@ComponentScan(excludeFilters = {
-        @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
-                classes = {ElasticSearchConfig.class, KafkaConsumerConfig.class})
-})
+
 @TestPropertySource(properties = {
         "spring.kafka.consumer.auto-offset-reset=earliest",
         "spring.kafka.listener.auto-startup=false",
@@ -50,6 +52,21 @@ class KspIntelligenceApplicationTest {
 
     @MockBean(name = "stringRedisTemplate")
     org.springframework.data.redis.core.StringRedisTemplate stringRedisTemplate;
+
+    @BeforeEach
+    void setUp() {
+        ValueOperations<String, String> valueOps = mock(ValueOperations.class);
+        when(stringRedisTemplate.opsForValue()).thenReturn(valueOps);
+
+        ZSetOperations<String, String> zSetOps = mock(ZSetOperations.class);
+        when(stringRedisTemplate.opsForZSet()).thenReturn(zSetOps);
+
+        HashOperations<String, Object, Object> hashOps = mock(HashOperations.class);
+        when(stringRedisTemplate.opsForHash()).thenReturn(hashOps);
+
+        StreamOperations<String, Object, Object> streamOps = mock(StreamOperations.class);
+        when(stringRedisTemplate.opsForStream()).thenReturn(streamOps);
+    }
 
     @Test
     void contextLoads() {
