@@ -11,6 +11,8 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none     # schema is created by init.sql on postgres container
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     show-sql: false
     properties:
       hibernate:

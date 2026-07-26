@@ -24,6 +24,7 @@ const FIRSearch = lazy(() => import('./pages/FIRSearch'));
 const IODashboard = lazy(() => import('./pages/IODashboard'));
 const AuditTrail = lazy(() => import('./pages/AuditTrail'));
 const Settings = lazy(() => import('./pages/Settings'));
+const CaseDetail = lazy(() => import('./pages/CaseDetail'));
 
 const router = createBrowserRouter([
   {
@@ -48,6 +49,7 @@ const router = createBrowserRouter([
       { path: 'io-dashboard', element: <IODashboard /> },
       { path: 'audit', element: <AuditTrail /> },
       { path: 'settings', element: <Settings /> },
+      { path: 'cases/:id', element: <CaseDetail /> },
     ],
   },
   { path: '*', element: <Navigate to="/" replace /> },
