@@ -1,19 +1,18 @@
-name: CI
+name: CI (dev)
 
 on:
   push:
-    branches: [ main ]
+    branches: [ '**' ]
   pull_request:
-    branches: [ main ]
+    branches: [ '**' ]
 
 jobs:
-  build:
+  test-and-build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # Java / Spring Boot
+      # --- API: Java + Maven ---
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -25,52 +24,43 @@ jobs:
         working-directory: api
         run: mvn -B verify
 
-      - name: Build API Docker image
+      - name: Build API image (linux/amd64) for dev
         working-directory: api
-        run: docker build -t ksp-intelligence-api:ci .
+        run: |
+          docker build -f Dockerfile.catalyst --platform linux/amd64 -t ksp-api-dev:${{ github.sha }} .
 
-      # Python / FastAPI
+      # --- ML Service: Python ---
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: pip
 
-      - name: Install Python dependencies
+      - name: Install Python deps & test
         working-directory: ml-service
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pytest -q
 
-      - name: Run Python tests
+      - name: Build ML image (linux/amd64) for dev
         working-directory: ml-service
-        run: pytest -q
+        run: |
+          docker build -f Dockerfile.catalyst --platform linux/amd64 -t ksp-ml-dev:${{ github.sha }} .
 
-      - name: Build ML Service Docker image
-        working-directory: ml-service
-        run: docker build -t ksp-ml-service:ci .
-
-      # Frontend
-      - name: Set up Node
+      # --- Frontend: Node ---
+      - name: Set up Node 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install frontend and test
+      - name: Frontend install & test
         working-directory: frontend
         run: |
           npm ci
           npm test
 
-      - name: Build frontend
+      - name: Build frontend image (linux/amd64) for dev
         working-directory: frontend
-        run: npm run build
-
-      - name: Archive artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifacts
-          path: |
-            api/target/*.jar
-            ml-service/**/__pycache__/**
-            frontend/dist/**
+        run: |
+          docker build -f Dockerfile.catalyst --platform linux/amd64 -t ksp-frontend-dev:${{ github.sha }} .
