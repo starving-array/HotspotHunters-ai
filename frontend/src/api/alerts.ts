@@ -1,90 +1,73 @@
 ﻿import type { Alert } from '../types';
+import axios from 'axios';
 
 // ============================================================
-// Alerts — initial feed + live stream subscription
+// Alerts — paginated history + live stream subscription
 // ============================================================
-// The live stream IS already wired (Layout.tsx subscribes to SSE
-// /api/v1/alerts/stream and emits a toast per event in U1). This module
-// just provides the typed accessor used by Overview's LiveFIRFeed + MapView.
-//
-// TODO(U3/U5): elevate the SSE state to a context (AlertContext) so the
-// Layout-level subscription and the Overview feed share ONE EventSource.
 
-// TODO(known-issue S3): SSE endpoint /api/v1/alerts/stream is permitAll in
-// SecurityConfig.java:62 — re-secure with JWT-in-query-param validation.
-// 
-export const SEED_ALERTS: Alert[] = [
-  {
-    id: 'seed-1',
-    caseMasterId: 251,
-    crimeNo: '1 0443 0006 2026 00251',
-    crimeType: 'Crimes vs Women',
-    district: 'Bengaluru Urban',
-    latitude: 12.9716,
-    longitude: 77.5946,
-    severity: 'critical',
-    timestamp: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'seed-2',
-    caseMasterId: 249,
-    crimeNo: '1 0443 0006 2026 00249',
-    crimeType: 'Property',
-    district: 'Mysuru',
-    latitude: 12.2958,
-    longitude: 76.6394,
-    severity: 'medium',
-    timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'seed-3',
-    caseMasterId: 892,
-    crimeNo: '2 0112 0045 2026 00892',
-    crimeType: 'Traffic',
-    district: 'Bengaluru Rural',
-    latitude: 12.9141,
-    longitude: 77.5603,
-    severity: 'low',
-    timestamp: new Date(Date.now() - 42 * 60 * 1000).toISOString(),
-  },
-];
+export interface PageResponse {
+  data: Alert[];
+  page: number;
+  size: number;
+  total: number;
+}
 
-// Initial fetch (stub returns SEED_ALERTS).
-// TODO(U5): axios.get('/api/v1/alerts?since=24h') returning the last 100 events.
-export async function getInitialAlerts(): Promise<Alert[]> {
-  await new Promise((r) => setTimeout(r, 30));
-  return SEED_ALERTS;
+export async function getAlertsPaginated(
+  page: number,
+  size: number,
+  _crimeType?: string,
+): Promise<PageResponse> {
+  const res = await axios.get('/api/v1/alerts', { params: { page, size } });
+  const body = res.data;
+
+  // support both paginated wrapper { data, page, size, total } and flat array
+  if (Array.isArray(body)) {
+    const total = body.length;
+    const from = page * size;
+    const sliced = body.slice(from, from + size).map(a => ({
+      ...a,
+      severity: a.severity as Alert['severity'],
+    }));
+    return { data: sliced, page, size, total };
+  }
+
+  return {
+    ...body,
+    data: (body.data as Alert[]).map(a => ({ ...a, severity: a.severity as Alert['severity'] })),
+  };
 }
 
 // Live SSE subscription — returns an unsubscribe function.
-// Already production-ready (not a stub): uses the same SSE endpoint
-// the Layout toasts use.
 export function subscribeAlerts(
   onAlert: (alert: Alert) => void,
   onError?: (err: Event) => void,
 ): () => void {
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-  const source = new EventSource(`${apiUrl}/api/v1/alerts/stream`);
-  source.onmessage = (ev) => {
+  const source = new EventSource('/api/v1/alerts/stream');
+  source.addEventListener('alert', (ev: MessageEvent) => {
     try {
-      const data = JSON.parse(ev.data) as Partial<Alert>;
-      if (data && (data.caseMasterId || data.crimeNo)) {
-        onAlert({
-          id: String(data.caseMasterId || data.crimeNo),
-          caseMasterId: data.caseMasterId || 0,
-          crimeNo: data.crimeNo || '',
-          crimeType: data.crimeType || 'FIR',
-          district: data.district || '',
-          latitude: data.latitude || 0,
-          longitude: data.longitude || 0,
-          severity: data.severity || 'low',
-          timestamp: data.timestamp || new Date().toISOString(),
-        });
-      }
+      const data = JSON.parse(ev.data) as Record<string, unknown>;
+      if (!data || !data.fir_id) return;
+      const zScore = data.zScore != null ? Number(data.zScore) : undefined;
+      const expected = data.expected != null ? Number(data.expected) : undefined;
+      const actual = data.actual != null ? Number(data.actual) : undefined;
+      onAlert({
+        id: String(data.fir_id),
+        caseMasterId: 0,
+        crimeNo: String(data.fir_id),
+        crimeType: String(data.crimeType || data.crime_type || 'FIR'),
+        district: String(data.district || ''),
+        latitude: 0,
+        longitude: 0,
+        severity: (String(data.severity || 'low').toLowerCase()) as Alert['severity'],
+        timestamp: String(data.incident_ts || new Date().toISOString()),
+        zScore,
+        expected,
+        actual,
+      });
     } catch {
       // ignore malformed payload
     }
-  };
+  });
   source.onerror = (err) => {
     if (onError) onError(err);
   };

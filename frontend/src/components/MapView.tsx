@@ -162,14 +162,14 @@ function popupHtml(a: Alert): string {
 
 interface Props {
   alerts?: Alert[];
-  heightClass?: string; // tailwind height class for the container
   showLayerPanel?: boolean;
+  heightClass?: string;
 }
 
 export default function MapView({
   alerts = SEED_MAP_ALERTS,
-  heightClass = 'h-[600px]',
   showLayerPanel = true,
+  heightClass,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -211,8 +211,13 @@ export default function MapView({
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
-    // Force Leaflet to recalculate size after the parent flex container settles
-    setTimeout(() => map.invalidateSize(), 200);
+    // Force Leaflet to recalculate size after the parent flex container settles.
+    // Guard against the map being torn down before the timer fires.
+    setTimeout(() => {
+      if (mapRef.current === map) {
+        try { map.invalidateSize(); } catch { /* map removed */ }
+      }
+    }, 200);
 
     return () => {
       map.remove();
@@ -238,7 +243,7 @@ export default function MapView({
 
   return (
     <section
-      className={`bg-surface-container/80 backdrop-blur-md border border-outline-variant rounded-lg flex flex-col relative overflow-hidden ${heightClass} z-0`}
+      className={`bg-surface-container/80 backdrop-blur-md border border-outline-variant rounded-lg flex flex-col relative overflow-hidden z-0 ${heightClass || 'h-full'}`}
     >
       <div className="p-4 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-low/50 z-10 relative">
         <h2 className="text-[18px] font-semibold text-on-surface">Live Telemetry Map</h2>

@@ -55,6 +55,9 @@ export interface Alert {
   longitude: number;
   severity: Severity;
   timestamp: string;
+  zScore?: number;
+  expected?: number;
+  actual?: number;
 }
 
 export interface District {
@@ -96,7 +99,7 @@ export interface CyberAlert {
 }
 
 export interface AuditEvent {
-  id: number;
+  id: string;
   userId: string;
   action: AuditAction;
   resource: string;
@@ -139,6 +142,7 @@ export interface NetworkLink {
 export interface ShapFeature {
   feature: string;
   weight: number;
+  value?: number;
 }
 
 export interface Toast {
@@ -168,6 +172,22 @@ export interface SystemService {
   status: 'healthy' | 'degraded' | 'down';
 }
 
+export interface OsintResult {
+  indicatorType: string;
+  indicatorValue: string;
+  malicious: boolean;
+  confidence: string;
+  reports: number;
+  categories: string[];
+  tags: string[];
+  reputation: number;
+  source: string;
+  country?: string;
+  asn?: string;
+  enrichedAt: string;
+  error?: string;
+}
+
 export interface KPIData {
   label: string;
   value: string | number;
@@ -175,4 +195,17 @@ export interface KPIData {
   trend?: 'up' | 'down' | 'flat';
   icon?: 'fir' | 'active' | 'heinous' | 'clearance' | 'cyber' | 'fraud' | 'identity';
   severity?: Severity;
+}
+
+export interface HotspotDistrict {
+  rank: number;
+  name: string;
+  cases: number;
+  trendPct: number;
+}
+
+export interface SystemHealthSummary {
+  services: SystemService[];
+  cpuPct: number;
+  ramGb: number;
 }

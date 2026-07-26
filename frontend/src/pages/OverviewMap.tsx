@@ -1,24 +1,23 @@
 ﻿import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import type { KPIData, Alert } from '../types';
-import type { HotspotDistrict } from '../api/hotspots';
+import type { KPIData } from '../types';
+import type { HotspotDistrict } from '../types';
 import { getKPIs } from '../api/dashboard';
-import { getInitialAlerts } from '../api/alerts';
 import { getHotspots } from '../api/hotspots';
 import LiveFIRFeed from '../components/LiveFIRFeed';
 import MapView from '../components/MapView';
 import HotspotLeaderboard from '../components/HotspotLeaderboard';
 import { useLanguage } from '../context/LanguageContext';
+import { useAlerts } from '../context/AlertContext';
 
 export default function OverviewMap() {
   const { t } = useLanguage();
   const [kpis, setKpis] = useState<KPIData[]>([]);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const alerts = useAlerts();
   const [hotspots, setHotspots] = useState<HotspotDistrict[]>([]);
 
   useEffect(() => {
     getKPIs().then(setKpis);
-    getInitialAlerts().then(setAlerts);
     getHotspots().then(setHotspots);
   }, []);
 
@@ -40,7 +39,7 @@ export default function OverviewMap() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.08, type: 'spring', stiffness: 240, damping: 28 }}
-            className="bg-surface-container/80 backdrop-blur-md border border-outline-variant/80 rounded-lg p-4"
+            className="bg-surface-container/80 backdrop-blur-md border border-outline-variant/80 rounded-lg p-4 glow-card"
           >
             <div className="flex justify-between items-start mb-2">
               <span className="text-[11px] font-semibold uppercase tracking-widest text-on-surface-variant">
@@ -61,18 +60,19 @@ export default function OverviewMap() {
         ))}
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[62%_38%] gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[66%_34%] gap-4 flex-1 min-h-0">
         <motion.div
+          className="min-h-0"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, type: 'spring', stiffness: 240, damping: 28 }}
         >
-          <MapView alerts={alerts} heightClass="h-[600px]" showLayerPanel />
+          <MapView alerts={alerts} showLayerPanel />
         </motion.div>
 
-        <div className="flex flex-col gap-4 h-[600px]">
+        <div className="flex flex-col min-h-0 gap-2">
           <motion.div
-            className="flex-1 min-h-0"
+            className="flex-[6] min-h-0 flex flex-col"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, type: 'spring', stiffness: 240, damping: 28 }}
@@ -80,7 +80,7 @@ export default function OverviewMap() {
             <LiveFIRFeed alerts={alerts} />
           </motion.div>
           <motion.div
-            className="h-[260px]"
+            className="flex-[3.5] min-h-0 flex flex-col"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, type: 'spring', stiffness: 240, damping: 28 }}
