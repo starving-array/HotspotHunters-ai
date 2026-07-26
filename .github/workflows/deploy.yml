@@ -26,7 +26,7 @@ jobs:
       - name: Build API image (linux/amd64) and save artifact
         working-directory: api
         run: |
-          docker build --platform linux/amd64 -t ksp-api:${{ github.sha }} .
+          docker build -f Dockerfile.catalyst --platform linux/amd64 -t ksp-api:${{ github.sha }} .
           docker save ksp-api:${{ github.sha }} | gzip > ksp-api.tar.gz
 
       # --- ML Service: Python ---
@@ -46,7 +46,7 @@ jobs:
       - name: Build ML image (linux/amd64) and save artifact
         working-directory: ml-service
         run: |
-          docker build --platform linux/amd64 -t ksp-ml:${{ github.sha }} .
+          docker build -f Dockerfile.catalyst --platform linux/amd64 -t ksp-ml:${{ github.sha }} .
           docker save ksp-ml:${{ github.sha }} | gzip > ksp-ml.tar.gz
 
       # --- Frontend: Node ---
@@ -68,7 +68,7 @@ jobs:
       - name: Build Frontend image (linux/amd64) and save artifact
         working-directory: frontend
         run: |
-          docker build --platform linux/amd64 -t ksp-frontend:${{ github.sha }} .
+          docker build -f Dockerfile.catalyst --platform linux/amd64 -t ksp-frontend:${{ github.sha }} .
           docker save ksp-frontend:${{ github.sha }} | gzip > ksp-frontend.tar.gz
 
       # --- Upload images as artifacts ---

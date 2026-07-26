@@ -33,6 +33,7 @@ spring:
       connection-timeout: 30000
 
   # ----- Kafka (COMMENTED FOR CATALYST — replaced by EventIngestionController) -----
+
   # kafka:
   #   bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
   #   consumer:
