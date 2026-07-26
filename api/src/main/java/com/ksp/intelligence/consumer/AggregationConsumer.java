@@ -1,4 +1,4 @@
-// Kafka-based consumer removed; see docs/future_development.md for re‑integration plan
+package com.ksp.intelligence.consumer;
 
 import com.ksp.intelligence.config.RedisKeysProperties;
 import com.ksp.intelligence.model.FirEventDto;
@@ -12,7 +12,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -33,7 +32,6 @@ import java.util.Map;
  * Manual ack after all three operations succeed.
  */
 @Component
-@ConditionalOnProperty(name = "ksp.kafka.enabled", havingValue = "true")
 
 public class AggregationConsumer {
 

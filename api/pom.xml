@@ -54,11 +54,11 @@
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
 
-    <!-- ElasticSearch client (Spring Data ES wraps the Java ES client) -->
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
-    </dependency>
+        <!-- ElasticSearch client (Spring Data ES wraps the Java ES client) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
+        </dependency>
 
         <!-- Kafka -->
         <dependency>

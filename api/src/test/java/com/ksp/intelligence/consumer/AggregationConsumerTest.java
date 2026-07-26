@@ -7,7 +7,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.Disabled;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -39,7 +38,6 @@ import static org.mockito.Mockito.*;
  *   - On Redis failure: ack NOT called, exception re-thrown
  */
 @ExtendWith(MockitoExtension.class)
-@Disabled
 class AggregationConsumerTest {
 
     @Mock private StringRedisTemplate redis;
