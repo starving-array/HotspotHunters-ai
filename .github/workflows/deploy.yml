@@ -106,8 +106,11 @@ jobs:
           path: /tmp/images
           merge-multiple: true
 
-      - name: Install Catalyst CLI
-        run: npm install -g zcatalyst-cli
+- name: Install Catalyst CLI
+          run: npm install -g zcatalyst-cli
+
+- name: Login to Catalyst
+          run: catalyst login --token "${{ secrets.CATALYST_TOKEN }}"
 
       - name: Login to Catalyst
         run: catalyst login --token "${{ secrets.CATALYST_TOKEN }}"
