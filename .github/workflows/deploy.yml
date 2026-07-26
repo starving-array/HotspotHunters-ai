@@ -1,0 +1,151 @@
+name: Deploy to Catalyst
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  test-and-build:
+    if: "!contains(github.event.head_commit.message, '[skip-deploy]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- API: Java + Maven ---
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Maven verify & test
+        working-directory: api
+        run: mvn -B verify
+
+      - name: Build API image (linux/amd64) and save artifact
+        working-directory: api
+        run: |
+          docker build --platform linux/amd64 -t ksp-api:${{ github.sha }} .
+          docker save ksp-api:${{ github.sha }} | gzip > ksp-api.tar.gz
+
+      # --- ML Service: Python ---
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install Python deps & test
+        working-directory: ml-service
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pytest -q
+
+      - name: Build ML image (linux/amd64) and save artifact
+        working-directory: ml-service
+        run: |
+          docker build --platform linux/amd64 -t ksp-ml:${{ github.sha }} .
+          docker save ksp-ml:${{ github.sha }} | gzip > ksp-ml.tar.gz
+
+      # --- Frontend: Node ---
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Frontend install & test
+        working-directory: frontend
+        run: |
+          npm ci
+          npm test
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Build Frontend image (linux/amd64) and save artifact
+        working-directory: frontend
+        run: |
+          docker build --platform linux/amd64 -t ksp-frontend:${{ github.sha }} .
+          docker save ksp-frontend:${{ github.sha }} | gzip > ksp-frontend.tar.gz
+
+      # --- Upload images as artifacts ---
+      - name: Upload API image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ksp-api-image
+          path: api/ksp-api.tar.gz
+          retention-days: 1
+
+      - name: Upload ML image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ksp-ml-image
+          path: ml-service/ksp-ml.tar.gz
+          retention-days: 1
+
+      - name: Upload Frontend image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ksp-frontend-image
+          path: frontend/ksp-frontend.tar.gz
+          retention-days: 1
+
+  deploy:
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download image artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ksp-*-image
+          path: /tmp/images
+          merge-multiple: true
+
+      - name: Install Catalyst CLI
+        run: npm install -g zcatalyst-cli
+
+      - name: Deploy API to AppSail
+        run: |
+          catalyst deploy appsail \
+            --name ksp-api \
+            --source docker-archive:///tmp/images/ksp-api.tar.gz \
+            --port 9000 \
+            --project "${{ secrets.CATALYST_PROJECT_NAME }}" \
+            --org "${{ secrets.CATALYST_ORG }}" \
+            --token "${{ secrets.CATALYST_TOKEN }}" \
+            --verbose
+
+      - name: Deploy ML Service to AppSail
+        run: |
+          catalyst deploy appsail \
+            --name ksp-ml \
+            --source docker-archive:///tmp/images/ksp-ml.tar.gz \
+            --port 9000 \
+            --project "${{ secrets.CATALYST_PROJECT_NAME }}" \
+            --org "${{ secrets.CATALYST_ORG }}" \
+            --token "${{ secrets.CATALYST_TOKEN }}" \
+            --verbose
+
+      - name: Deploy Frontend to AppSail
+        run: |
+          catalyst deploy appsail \
+            --name ksp-frontend \
+            --source docker-archive:///tmp/images/ksp-frontend.tar.gz \
+            --port 9000 \
+            --project "${{ secrets.CATALYST_PROJECT_NAME }}" \
+            --org "${{ secrets.CATALYST_ORG }}" \
+            --token "${{ secrets.CATALYST_TOKEN }}" \
+            --verbose
+
+      - name: Verify health
+        run: |
+          echo "=== API Health ==="
+          curl -fsI https://ksp-api-$(echo "${{ secrets.CATALYST_ORG }}" | cut -d'_' -f2).development.catalystserverless.com/actuator/health && echo " OK" || echo " FAIL"
+          echo "=== ML Health ==="
+          curl -fsI https://ksp-ml-$(echo "${{ secrets.CATALYST_ORG }}" | cut -d'_' -f2).development.catalystserverless.com/health && echo " OK" || echo " FAIL"
+          echo "=== Deployment Complete ==="

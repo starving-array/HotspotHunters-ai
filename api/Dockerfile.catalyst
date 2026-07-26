@@ -1,0 +1,10 @@
+# Catalyst AppSail Dockerfile for Spring Boot API
+# Build: docker build --platform linux/amd64 -t ksp-api -f Dockerfile.catalyst .
+# Deploy: catalyst deploy appsail --name ksp-api --source docker://ksp-api:latest --port 9000
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+RUN apk add --no-cache curl
+COPY target/*-SNAPSHOT.jar /app/app.jar
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=70 -XX:+UseG1GC -Djava.security.egd=file:/dev/./urandom"
+EXPOSE 9000
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar --server.port=${SERVER_PORT:-9000}"]

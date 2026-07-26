@@ -200,6 +200,7 @@ export interface KPIData {
 export interface HotspotDistrict {
   rank: number;
   name: string;
+  code: string;
   cases: number;
   trendPct: number;
 }

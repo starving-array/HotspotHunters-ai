@@ -1,1 +1,16 @@
-{}
+{
+  "appsail": [
+    {
+      "source": "docker://ksp-intelligence-portal-spring-boot-api:latest",
+      "name": "ksp-api"
+    },
+    {
+      "source": "docker://ksp-intelligence-portal-python-ml:latest",
+      "name": "ksp-ml"
+    },
+    {
+      "source": "docker://ksp-intelligence-portal-react-frontend:latest",
+      "name": "ksp-frontend"
+    }
+  ]
+}

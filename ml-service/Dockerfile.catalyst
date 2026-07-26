@@ -1,0 +1,11 @@
+# Catalyst AppSail Dockerfile for ML Service
+# Build: docker build --platform linux/amd64 -t ksp-ml -f Dockerfile.catalyst .
+FROM tiangolo/uvicorn-gunicorn-fastapi:python3.11
+COPY . /app
+WORKDIR /app
+RUN pip install --no-cache-dir -r requirements.txt
+ENV MODULE_NAME=app.main
+ENV APP_MODULE=app.main:app
+ENV PORT=9000
+EXPOSE 9000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "9000"]

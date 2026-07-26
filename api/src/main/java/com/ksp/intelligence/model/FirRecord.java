@@ -81,6 +81,10 @@ private String firId;
     @Column(name = "modus_operandi", columnDefinition = "text")
     private String modusOperandi;
 
+    // -- CATALYST: search_vector column for PostgreSQL full-text search --
+    // @Column(name = "search_vector", columnDefinition = "tsvector")
+    // private String searchVector;
+
     @Column(name = "status", length = 20)
     @Builder.Default
     private FirStatus status = FirStatus.OPEN;

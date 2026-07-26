@@ -1,17 +1,13 @@
 package com.ksp.intelligence.config;
 
+// CATALYST: ElasticSearch config disabled (replaced by PG full-text search).
+// Uncomment for local Docker deployment with ElasticSearch.
+/*
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.elasticsearch.client.ClientConfiguration;
 import org.springframework.data.elasticsearch.client.elc.ElasticsearchConfiguration;
 
-/**
- * ElasticSearch 8.x client configuration.
- *
- * Spring Boot's {@code spring.elasticsearch.uris} property exposes connection info,
- * but creating a custom configuration here lets us pin timeouts explicitly and
- * (in Phase 6) layer basic auth/SSL on top.
- */
 @Configuration
 public class ElasticSearchConfig extends ElasticsearchConfiguration {
 
@@ -26,6 +22,12 @@ public class ElasticSearchConfig extends ElasticsearchConfiguration {
                 .withSocketTimeout(java.time.Duration.ofSeconds(60))
                 .build();
     }
+
+    private String stripScheme(String uri) {
+        return uri.replaceFirst("^https?://", "");
+    }
+}
+*/
 
     /**
      * Convert either {@code http://elasticsearch:9200} or {@code https://...}

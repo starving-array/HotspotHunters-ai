@@ -1,5 +1,12 @@
 import axios from 'axios';
 
+// CATALYST: Use VITE_API_BASE_URL for production. In local dev, proxy handles /api requests.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
+if (API_BASE_URL) {
+  axios.defaults.baseURL = API_BASE_URL;
+}
+
 axios.defaults.withCredentials = true;
 
 let isRefreshing = false;
@@ -46,7 +53,7 @@ axios.interceptors.response.use(
       try {
         const rt = localStorage.getItem('jwt_refresh');
         if (!rt) throw new Error('No refresh token');
-        const resp = await fetch('/api/v1/auth/refresh', {
+        const resp = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
