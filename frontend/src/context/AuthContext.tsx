@@ -18,7 +18,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('jwt_token'));
   const [username, setUsername] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const hasStoredToken = !!localStorage.getItem('jwt_token');
+  const [loading, setLoading] = useState(hasStoredToken && window.location.pathname !== '/login');
 
   // Validate session on mount — skip the login page to avoid a
   // needless /me 401 in console.  Stale tokens get cleared here so
