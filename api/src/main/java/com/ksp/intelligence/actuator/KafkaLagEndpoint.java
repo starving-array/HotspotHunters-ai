@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
 import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -19,6 +20,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 @Component
+@ConditionalOnProperty(name = "ksp.kafka.enabled", havingValue = "true")
 @Endpoint(id = "kafkaLag")
 public class KafkaLagEndpoint {
 

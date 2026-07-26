@@ -9,6 +9,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
@@ -34,6 +35,7 @@ import java.util.Optional;
  *   - This listener is just the Kafka plumbing.
  */
 @Component
+@ConditionalOnProperty(name = "ksp.kafka.enabled", havingValue = "true")
 public class AnomalyConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(AnomalyConsumer.class);

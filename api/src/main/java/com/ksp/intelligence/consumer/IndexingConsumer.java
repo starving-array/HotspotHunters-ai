@@ -1,68 +1,17 @@
+// Elasticsearch based indexing consumer removed; see docs/future_development.md for re‑integration plan
+
 package com.ksp.intelligence.consumer;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ksp.intelligence.model.FirEventDto;
-import com.ksp.intelligence.model.FirRecord;
-import com.ksp.intelligence.repository.FirRecordRepository;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
-import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
-import org.springframework.data.elasticsearch.core.query.IndexQuery;
-import org.springframework.data.elasticsearch.core.query.IndexQueryBuilder;
-import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.support.Acknowledgment;
-import org.springframework.stereotype.Component;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
 /**
- * Consumer Group 1 — "indexing-service"
- *
- * Dual write each FIR event to:
- *   - PostgreSQL (Spring Data JPA upsert — idempotent on fir_id PRIMARY KEY)
- *   - ElasticSearch (index operation with _id = fir_id — idempotent on _id)
- *
- * Manual ack only AFTER both writes succeed → on failure, offset stays uncommitted
- * and the consumer re-delivers the event. Both writes are idempotent so a retry
- * after partial failure is safe.
- *
- * ElasticSearch document shape is designed to match the mapping declared in
- * infra/elasticsearch/mappings.json (Phase 0):
- *   - location is a geo_point {lat, lon}
- *   - district/taluk/crime_type are keywords
- *   - incident_ts is a date
- *   - modus_operandi is analyzed text (english analyzer)
+ * Placeholder class kept only so the source tree compiles when the Elasticsearch
+ * dependency is omitted. All real indexing logic is disabled for Catalyst
+ * deployments. When you decide to bring Elasticsearch back, replace this file
+ * with the original implementation from the repository history.
  */
-@Component
 public class IndexingConsumer {
+    // No‑op – functionality removed for Catalyst.
+}
 
-    private static final Logger log = LoggerFactory.getLogger(IndexingConsumer.class);
-    private static final ExecutorService IO_EXECUTOR = Executors.newCachedThreadPool();
-
-    private final FirRecordRepository firRepo;
-    private final ElasticsearchOperations es;
-    private final ObjectMapper objectMapper;
-
-    @Value("${ksp.elasticsearch.crime-index:crime-index}")
-    private String crimeIndex = "crime-index";
-
-    @Value("${ksp.kafka.consumer-groups.indexing:indexing-service}")
-    private String groupId = "indexing-service";
-
-    public IndexingConsumer(FirRecordRepository firRepo,
-                            ElasticsearchOperations es,
-                            ObjectMapper objectMapper) {
-        this.firRepo = firRepo;
-        this.es = es;
-        this.objectMapper = objectMapper;
-    }
 
     @KafkaListener(
             topics = "${ksp.kafka.fir-topic:fir-events}",
