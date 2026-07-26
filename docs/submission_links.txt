@@ -1,0 +1,31 @@
+# KSP Intelligence Portal — Submission Links
+
+## Repository
+GitHub URL: https://github.com/ArchishmanDas/hotspothunters-ai
+
+## Catalyst Deployment
+(To be filled after deployment)
+
+## Demo Video
+(To be uploaded — 5 min walkthrough)
+
+---
+
+## Architecture Overview
+- **Stack**: Java 17 + Spring Boot 3.4 (API), Python FastAPI (ML), React 18 + Vite 5 (UI)
+- **Infra**: Docker Compose (11 containers), Kafka, PostgreSQL, ElasticSearch, Redis, Neo4j
+- **ML Models**: Random Forest (hotspot), Gradient Boosting (offender risk + SHAP), TF-IDF (FIR similarity), Isolation Forest (anomaly detection), Common-Neighbor (link prediction)
+
+## Quick Start
+```bash
+git clone <repo>
+cp .env.example .env
+docker compose -f infra/docker-compose.yml -f infra/docker-compose.dev.yml up -d
+# Wait ~90s for all health checks
+```
+
+## Key Design Decisions
+1. **LLM as translation layer** — not as data source (Anthropic Claude for NL→ES query)
+2. **Polyglot persistence** — PG (source of truth), ES (geo search), Redis (real-time leaderboard), Neo4j (graph)
+3. **Kafka event-driven** — 4 consumer groups for parallel processing
+4. **Sub-second hotspots** — Redis Sorted Set for O(log N) live leaderboard reads

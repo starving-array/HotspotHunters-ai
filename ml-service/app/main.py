@@ -2,7 +2,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import predict, nl
+from app.routers import predict, nl, similarity
 
 app = FastAPI(title="KSP ML Service")
 
@@ -16,6 +16,7 @@ app.add_middleware(
 
 app.include_router(predict.router, prefix="/predict")
 app.include_router(nl.router, prefix="/nl")
+app.include_router(similarity.router)
 
 @app.get("/health")
 def health():

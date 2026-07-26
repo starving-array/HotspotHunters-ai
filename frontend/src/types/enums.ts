@@ -86,9 +86,8 @@ export enum IndianState {
 // match the district table's `districtname` column exactly so this enum
 // doubles as a backend-interop dictionary.
 //
-// TODO(data-cleanup): `Kannur` is a Kerala district that appears in the
-// Karnataka district table — likely a seed error. Remove once backend is
-// reconciled.
+// NOTE: `Kannur` was a Kerala district that appeared in the Karnataka
+// district table — handled in migration 009 (marked inactive).
 export enum KarnatakaDistrict {
   Bagalkot = 'Bagalkot',
   BangaloreRural = 'Bangalore Rural',

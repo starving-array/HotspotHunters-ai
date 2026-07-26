@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { TrendingDown, TrendingUp, Minus } from 'lucide-react';
 import { getHotspots } from '../api/hotspots';
-import type { HotspotDistrict } from '../api/hotspots';
+import type { HotspotDistrict } from '../types';
 
-function barStyleFor(cases: number, max: number): string {
+function barFill(cases: number, max: number): string {
   const pct = (cases / max) * 100;
   if (pct >= 70) return 'bg-error';
   if (pct >= 40) return 'bg-gradient-to-r from-primary to-tertiary';
@@ -47,14 +47,19 @@ export default function HotspotLeaderboard({ title = 'Hotspot Districts' }: Prop
   );
 
   return (
-    <section className="bg-surface-container/80 backdrop-blur-md border border-outline-variant rounded-lg flex flex-col h-full min-h-0">
+    <section className="bg-surface-container/80 backdrop-blur-md border border-outline-variant rounded-lg flex flex-col flex-1 min-h-0">
       <div className="p-3 border-b border-outline-variant/30 bg-surface-container-low/50 flex items-center gap-2">
         <span className="w-2 h-2 rounded-full bg-tertiary" />
         <h2 className="text-[11px] font-semibold uppercase tracking-widest text-on-surface">
           {title}
         </h2>
       </div>
-      <div className="flex-1 p-4 flex flex-col justify-around gap-3 overflow-y-auto">
+      <div className="flex-1 p-4 flex flex-col gap-3 overflow-y-auto">
+        {sorted.length === 0 && (
+          <div className="text-center py-8 text-outline text-sm">
+            No hotspot data available
+          </div>
+        )}
         {sorted.map((d) => {
           const widthPct = Math.round((d.cases / max) * 100);
           return (
@@ -75,7 +80,7 @@ export default function HotspotLeaderboard({ title = 'Hotspot Districts' }: Prop
               </div>
               <div className="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
                 <div
-                  className={`h-full transition-all duration-700 ${barStyleFor(d.cases, max)}`}
+                   className={`h-full transition-all duration-700 ${barFill(d.cases, max)}`}
                   style={{ width: `${widthPct}%` }}
                 />
               </div>

@@ -51,6 +51,9 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        enable.idempotence: true
+        acks: all
 
   # ----- ElasticSearch -----
   elasticsearch:
@@ -94,12 +97,17 @@ ksp:
     spike-threshold-sigma: 2.0             # spike when current - mean > 2*sigma
     high-severity-sigma: 3.0               # publish HIGH above this many sigma
 
+# ----- ML Service -----
+ml:
+  service:
+    base-url: ${ML_SERVICE_URL:http://ml-service:8001}
+
 # ----- Actuator -----
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus
+        include: health,info,metrics,prometheus,kafkaLag
   endpoint:
     health:
       show-details: when-authorized

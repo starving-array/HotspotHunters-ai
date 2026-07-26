@@ -14,6 +14,8 @@ import lombok.Setter;
 import lombok.ToString;
 import lombok.EqualsAndHashCode;
 
+import com.ksp.intelligence.model.domain.FirStatus;
+
 import java.time.Instant;
 
 
@@ -81,7 +83,7 @@ private String firId;
 
     @Column(name = "status", length = 20)
     @Builder.Default
-    private String status = "OPEN";
+    private FirStatus status = FirStatus.OPEN;
 
     @Column(name = "created_at")
     @Temporal(TemporalType.TIMESTAMP)
@@ -104,7 +106,7 @@ private String firId;
                 .offenderId(dto.getOffenderId())
                 .victimId(dto.getVictimId())
                 .modusOperandi(dto.getModusOperandi())
-                .status(dto.getStatus() != null ? dto.getStatus() : "OPEN")
+                .status(FirStatus.fromDb(dto.getStatus() != null ? dto.getStatus() : "OPEN"))
                 .build();
     }
 

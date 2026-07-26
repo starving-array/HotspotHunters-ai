@@ -21,7 +21,7 @@ public class PredictionController {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Value("${ml.service.base-url:http://localhost:8001}")
+    @Value("${ml.service.base-url}")
     private String mlBaseUrl;
 
     @PostMapping(value = "/hotspot", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)

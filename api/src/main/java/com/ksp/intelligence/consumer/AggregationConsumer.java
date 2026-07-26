@@ -25,10 +25,8 @@ import java.util.Map;
  *   2. HINCRBY district:24h:<district_code> <crime_type> 1  — per-district breakdown (TTL 25h)
  *   3. XADD alerts:stream MAXLEN ~ 500 * {...}      — SSE-capable live feed (capped ~500)
  *
- * All three operations are idempotent in the sense that re-running the same event
- * would just increment counters twice — but the consumer group's offset semantics
- * mean re-processing is rare. If it does occur, accept the small skew and
- * continue (counter drift is acceptable for a demo leaderboard).
+ * Idempotency is ensured via a Redis SETNX key (TTL 1h, key = "processed:fir:<fir_id>").
+ * If the same FIR event is re-delivered within 1 hour, it is silently skipped.
  *
  * Manual ack after all three operations succeed.
  */
@@ -52,6 +50,13 @@ public class AggregationConsumer {
     )
     public void onFirEvent(ConsumerRecord<String, FirEventDto> record, Acknowledgment ack) {
         FirEventDto dto = record.value();
+        String dedupKey = "processed:fir:" + dto.getFirId();
+        Boolean firstSeen = redis.opsForValue().setIfAbsent(dedupKey, "1", Duration.ofHours(1));
+        if (Boolean.FALSE.equals(firstSeen)) {
+            log.debug("Skipping already-processed FIR {} (idempotency)", dto.getFirId());
+            ack.acknowledge();
+            return;
+        }
         try {
             String district = dto.getDistrictCode();
             String crimeType = dto.getCrimeType();

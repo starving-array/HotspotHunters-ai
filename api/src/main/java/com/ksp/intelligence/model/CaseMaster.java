@@ -1,5 +1,6 @@
 package com.ksp.intelligence.model;
 
+import com.ksp.intelligence.model.domain.Severity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -25,4 +26,16 @@ public class CaseMaster {
 
     @Column(name = "BriefFacts", columnDefinition = "TEXT")
     private String briefFacts;
+
+    @Column(name = "is_cybercrime", nullable = false)
+    private Boolean isCybercrime = false;
+
+    @Column(name = "primary_platform", length = 100)
+    private String primaryPlatform;
+
+    @Column(name = "financial_loss", precision = 15, scale = 2)
+    private java.math.BigDecimal financialLoss;
+
+    @Column(name = "cyber_severity", length = 20)
+    private Severity cyberSeverity;
 }

@@ -1,13 +1,16 @@
 import { useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Lock, User, Loader2, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function Login() {
+  const navigate = useNavigate();
   const { login } = useAuth();
   const { t } = useLanguage();
   const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -16,7 +19,8 @@ export default function Login() {
     setError(null);
     setLoading(true);
     try {
-      await login(username.trim());
+      await login(username.trim(), password);
+      navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to authenticate.');
     } finally {
@@ -79,14 +83,12 @@ export default function Login() {
               <input
                 type="password"
                 placeholder="Password"
-                value=""
-                className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-md pl-10 pr-3 py-3 text-on-surface placeholder:text-outline focus:border-primary focus:outline-none transition-colors text-sm cursor-not-allowed opacity-60"
-                disabled
-                readOnly
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-md pl-10 pr-3 py-3 text-on-surface placeholder:text-outline focus:border-primary focus:outline-none transition-colors text-sm"
+                disabled={loading}
+                required
               />
-              <p className="text-[10px] text-outline mt-1 ml-1 font-mono">
-                NOTE: out-of-scope for this UI phase — auth flow preserved as-is
-              </p>
             </div>
 
             {error && (
@@ -97,7 +99,7 @@ export default function Login() {
 
             <button
               type="submit"
-              disabled={loading || !username.trim()}
+              disabled={loading || !username.trim() || !password}
               className="w-full bg-primary text-on-primary border border-primary rounded-md py-3 font-semibold text-[11px] uppercase tracking-widest hover:bg-primary-fixed-dim transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(76,215,246,0.18)]"
             >
               {loading ? (

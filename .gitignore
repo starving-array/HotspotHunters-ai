@@ -30,6 +30,7 @@ frontend/.env.local
 
 # Docker
 *.log
+*.err
 
 # OS files
 .DS_Store

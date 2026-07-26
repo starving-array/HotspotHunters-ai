@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import './api/axiosConfig';
 import { AuthProvider } from './context/AuthContext';
+import { AlertProvider } from './context/AlertContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { ToastProvider } from './context/ToastContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -56,13 +57,15 @@ function App() {
   return (
     <ErrorBoundary>
       <LanguageProvider>
-        <AuthProvider>
-          <ToastProvider>
-            <Suspense fallback={<FullPageLoader />}>
-              <RouterProvider router={router} />
-            </Suspense>
-          </ToastProvider>
-        </AuthProvider>
+          <AuthProvider>
+            <AlertProvider>
+              <ToastProvider>
+                <Suspense fallback={<FullPageLoader />}>
+                  <RouterProvider router={router} />
+                </Suspense>
+              </ToastProvider>
+            </AlertProvider>
+          </AuthProvider>
       </LanguageProvider>
     </ErrorBoundary>
   );

@@ -8,10 +8,12 @@ import com.ksp.intelligence.service.AlertPublisher;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 import java.util.Optional;
 
 /**
@@ -39,13 +41,16 @@ public class AnomalyConsumer {
     private final AnomalyDetectionService anomalyService;
     private final AlertPublisher alertPublisher;
     private final AnomalyProperties props;
+    private final StringRedisTemplate redis;
 
     public AnomalyConsumer(AnomalyDetectionService anomalyService,
                             AlertPublisher alertPublisher,
-                            AnomalyProperties props) {
+                            AnomalyProperties props,
+                            StringRedisTemplate redis) {
         this.anomalyService = anomalyService;
         this.alertPublisher = alertPublisher;
         this.props = props;
+        this.redis = redis;
     }
 
     @KafkaListener(
@@ -55,6 +60,13 @@ public class AnomalyConsumer {
     )
     public void onFirEvent(ConsumerRecord<String, FirEventDto> record, Acknowledgment ack) {
         FirEventDto dto = record.value();
+        String dedupKey = "processed:fir:" + dto.getFirId();
+        Boolean firstSeen = redis.opsForValue().setIfAbsent(dedupKey, "1", Duration.ofHours(1));
+        if (Boolean.FALSE.equals(firstSeen)) {
+            log.debug("Skipping already-processed FIR {} (idempotency)", dto.getFirId());
+            ack.acknowledge();
+            return;
+        }
         try {
             // 1-4 maintained in the service
             Optional<AnomalyDetectionService.SpikeResult> spike =

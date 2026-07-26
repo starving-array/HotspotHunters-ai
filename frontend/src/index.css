@@ -82,6 +82,9 @@
   /* Border alias commonly used in the reference HTML */
   --color-card-border: #1e3a5f;
 
+  /* Spacing tokens */
+  --spacing-margin-desktop: 24px;
+
   /* Fonts */
   --font-sans: "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;

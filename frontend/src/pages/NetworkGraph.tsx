@@ -6,10 +6,6 @@ import type { NetworkNode, NetworkLink, ShapFeature } from '../types';
 import { getGraphData, getShapFeatures } from '../api/network';
 import { useLanguage } from '../context/LanguageContext';
 
-// TODO(known-issue): SHAP drawer uses MOCK feature-weight bars (see
-// api/network.ts). ML inference service not yet wired — replace with
-// real /api/v1/network/{id}/shap when backend endpoint exists.
-
 const RISK_COLOR: Record<string, string> = {
   low: '#52d9a0',
   medium: '#ffb873',
@@ -103,32 +99,31 @@ function Drawer({
               </section>
             )}
 
-            <section>
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-[11px] font-semibold uppercase tracking-widest text-outline">
-                  {t('shapAttribution')}
-                </h4>
-                <span className="text-[10px] font-mono uppercase tracking-widest text-tertiary bg-tertiary/10 px-1.5 py-0.5 rounded">
-                  demo data
-                </span>
-              </div>
-              <div className="space-y-2">
-                {shap.map((f) => (
-                  <div key={f.feature}>
-                    <div className="flex justify-between text-[12px] mb-1">
-                      <span className="text-on-surface-variant font-mono">{f.feature.replace(/_/g, ' ')}</span>
-                      <span className="font-mono tabular-nums text-on-surface">{(f.weight * 100).toFixed(0)}%</span>
+            {shap.length > 0 && (
+              <section>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-[11px] font-semibold uppercase tracking-widest text-outline">
+                    {t('shapAttribution')}
+                  </h4>
+                </div>
+                <div className="space-y-2">
+                  {shap.map((f) => (
+                    <div key={f.feature}>
+                      <div className="flex justify-between text-[12px] mb-1">
+                        <span className="text-on-surface-variant font-mono">{f.feature.replace(/_/g, ' ')}</span>
+                        <span className="font-mono tabular-nums text-on-surface">{(f.weight * 100).toFixed(0)}%</span>
+                      </div>
+                      <div className="h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-primary to-tertiary transition-all duration-500"
+                          style={{ width: `${Math.abs(f.weight * 100)}%` }}
+                        />
+                      </div>
                     </div>
-                    <div className="h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-primary to-tertiary transition-all duration-500"
-                        style={{ width: `${f.weight * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
         </motion.aside>
       )}
@@ -163,11 +158,15 @@ export default function NetworkIntelligenceGraphPage() {
 
   useEffect(() => {
     getGraphData().then(setGraphData);
-    getShapFeatures().then(setShapFeatures);
   }, []);
 
   const handleNodeClick = useCallback((node: NetworkNode) => {
     setSelectedNode(node);
+    if (node.type === 'person') {
+      getShapFeatures(String(node.id)).then(setShapFeatures);
+    } else {
+      setShapFeatures([]);
+    }
   }, []);
 
   return (

@@ -1,11 +1,11 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, DollarSign, UserX, Monitor, Cpu } from 'lucide-react';
+import { Shield, DollarSign, UserX, Monitor, Cpu, Search } from 'lucide-react';
 import MapView from '../components/MapView';
-import { getCyberDashboard, PATTERN_LABELS } from '../api/cybercrime';
+import { getCyberDashboard, lookupOsintIndicator, enrichText, PATTERN_LABELS } from '../api/cybercrime';
 import type { CyberDashboardData } from '../api/cybercrime';
 import { useLanguage } from '../context/LanguageContext';
-import type { CyberAlert, Alert } from '../types';
+import type { CyberAlert, Alert, OsintResult } from '../types';
 
 function CyberKpi({ icon: Icon, label, value }: { icon: typeof Shield; label: string; value: number }) {
   return (
@@ -61,13 +61,57 @@ function PatternRow({ pattern }: { pattern: CyberAlert }) {
   );
 }
 
+function IndicatorBadge({ result }: { result: OsintResult }) {
+  const isMalicious = result.malicious;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono border ${
+        isMalicious
+          ? 'bg-error/10 border-error/30 text-error'
+          : 'bg-primary/10 border-primary/20 text-primary'
+      }`}
+      title={`${result.indicatorType}:${result.indicatorValue} | ${result.reports} reports | ${result.categories.join(', ')}`}
+    >
+      <span className={`w-1.5 h-1.5 rounded-full ${isMalicious ? 'bg-error' : 'bg-primary'}`} />
+      {result.indicatorValue.length > 25
+        ? result.indicatorValue.substring(0, 22) + '…'
+        : result.indicatorValue}
+    </span>
+  );
+}
+
 export default function CybercrimeIntelligencePage() {
   const { t } = useLanguage();
   const [data, setData] = useState<CyberDashboardData | null>(null);
+  const [osintIoc, setOsintIoc] = useState('');
+  const [osintResult, setOsintResult] = useState<OsintResult | null>(null);
+  const [osintSearching, setOsintSearching] = useState(false);
+  const [enrichResults, setEnrichResults] = useState<Record<string, OsintResult[]> | null>(null);
+  const [enrichTextVal, setEnrichTextVal] = useState('');
 
   useEffect(() => {
     getCyberDashboard().then(setData);
   }, []);
+
+  const handleOsintLookup = useCallback(async () => {
+    if (!osintIoc.trim()) return;
+    setOsintSearching(true);
+    setOsintResult(null);
+    try {
+      const type = osintIoc.includes('.') ? 'domain' : osintIoc.includes('@') ? 'email' : 'ip';
+      const result = await lookupOsintIndicator(osintIoc.trim(), type);
+      setOsintResult(result);
+    } catch { /* ignore */ }
+    setOsintSearching(false);
+  }, [osintIoc]);
+
+  const handleEnrichText = useCallback(async () => {
+    if (!enrichTextVal.trim()) return;
+    try {
+      const results = await enrichText(enrichTextVal);
+      setEnrichResults(results);
+    } catch { /* ignore */ }
+  }, [enrichTextVal]);
 
   if (!data) return null;
 
@@ -91,7 +135,7 @@ export default function CybercrimeIntelligencePage() {
         <CyberKpi icon={UserX} label={t('identityTheft')} value={data.kpis.identityTheft} />
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-[58%_42%] gap-4">
+      <section className="grid grid-cols-1 lg:grid-cols-[58%_42%] gap-4 mb-4">
         <MapView
           alerts={data.mapAlerts as Alert[]}
           heightClass="h-[520px]"
@@ -124,6 +168,101 @@ export default function CybercrimeIntelligencePage() {
               </tbody>
             </table>
           </div>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-surface-container/80 backdrop-blur-md border border-outline-variant rounded-lg p-4">
+          <h3 className="text-[11px] font-semibold uppercase tracking-widest text-on-surface mb-3 flex items-center gap-2">
+            <Search className="w-3.5 h-3.5 text-primary" />
+            OSINT Indicator Lookup
+          </h3>
+          <div className="flex gap-2 mb-3">
+            <input
+              type="text"
+              value={osintIoc}
+              onChange={(e) => setOsintIoc(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleOsintLookup()}
+              placeholder="IP, domain, email, phone…"
+              className="flex-1 bg-surface-container-low border border-outline-variant/30 rounded px-3 py-1.5 text-[13px] text-on-surface font-mono placeholder:text-outline focus:outline-none focus:border-primary/50"
+            />
+            <button
+              onClick={handleOsintLookup}
+              disabled={osintSearching}
+              className="px-3 py-1.5 bg-primary/10 border border-primary/30 rounded text-[11px] font-semibold uppercase tracking-widest text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
+            >
+              {osintSearching ? '…' : 'Lookup'}
+            </button>
+          </div>
+          {osintResult && (
+            <div className="space-y-1.5 text-[12px] font-mono">
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${osintResult.malicious ? 'bg-error' : 'bg-primary'}`} />
+                <span className={osintResult.malicious ? 'text-error' : 'text-primary'}>
+                  {osintResult.malicious ? 'MALICIOUS' : 'CLEAN'}
+                </span>
+                <span className="text-outline">|</span>
+                <span className="text-on-surface-variant">reputation {osintResult.reputation}/100</span>
+                <span className="text-outline">|</span>
+                <span className="text-on-surface-variant">{osintResult.reports} reports</span>
+              </div>
+              {osintResult.categories.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {osintResult.categories.map((c) => (
+                    <span key={c} className="px-1.5 py-0.5 bg-tertiary/10 text-tertiary rounded text-[10px]">{c}</span>
+                  ))}
+                </div>
+              )}
+              {(osintResult.country || osintResult.asn) && (
+                <div className="text-outline">
+                  {osintResult.country && <span>{osintResult.country}</span>}
+                  {osintResult.country && osintResult.asn && <span> · </span>}
+                  {osintResult.asn && <span>{osintResult.asn}</span>}
+                </div>
+              )}
+              <div className="text-outline text-[10px]">
+                source: {osintResult.source} · {new Date(osintResult.enrichedAt).toLocaleString()}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-surface-container/80 backdrop-blur-md border border-outline-variant rounded-lg p-4">
+          <h3 className="text-[11px] font-semibold uppercase tracking-widest text-on-surface mb-3">
+            IOC Extraction
+          </h3>
+          <textarea
+            value={enrichTextVal}
+            onChange={(e) => setEnrichTextVal(e.target.value)}
+            placeholder="Paste FIR text to extract indicators…"
+            rows={4}
+            className="w-full bg-surface-container-low border border-outline-variant/30 rounded px-3 py-2 text-[13px] text-on-surface font-mono placeholder:text-outline focus:outline-none focus:border-primary/50 resize-none mb-2"
+          />
+          <button
+            onClick={handleEnrichText}
+            className="px-3 py-1.5 bg-primary/10 border border-primary/30 rounded text-[11px] font-semibold uppercase tracking-widest text-primary hover:bg-primary/20 transition-colors mb-3"
+          >
+            Extract
+          </button>
+          {enrichResults && (
+            <div className="space-y-2 max-h-[200px] overflow-y-auto">
+              {Object.entries(enrichResults).map(([type, results]) => (
+                <div key={type}>
+                  <div className="text-[10px] font-mono uppercase tracking-widest text-outline mb-1">
+                    {type} ({results.length})
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {results.map((r) => (
+                      <IndicatorBadge key={r.indicatorValue} result={r} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {Object.keys(enrichResults).length === 0 && (
+                <p className="text-[12px] text-outline italic">No indicators found in the text.</p>
+              )}
+            </div>
+          )}
         </div>
       </section>
     </div>

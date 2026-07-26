@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface FirRecordRepository extends JpaRepository<FirRecord, String> {
     List<FirRecord> findByDistrictCodeAndIncidentTsBetween(String districtCode, Instant start, Instant end);
+    List<FirRecord> findByDistrictCodeInAndIncidentTsBetween(List<String> districtCodes, Instant start, Instant end);
 }

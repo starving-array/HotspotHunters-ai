@@ -9,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
-import org.springframework.data.elasticsearch.core.document.Document;
 import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
 import org.springframework.data.elasticsearch.core.query.IndexQuery;
 import org.springframework.data.elasticsearch.core.query.IndexQueryBuilder;
@@ -19,6 +18,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Consumer Group 1 — "indexing-service"
@@ -42,6 +44,7 @@ import java.util.Map;
 public class IndexingConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(IndexingConsumer.class);
+    private static final ExecutorService IO_EXECUTOR = Executors.newCachedThreadPool();
 
     private final FirRecordRepository firRepo;
     private final ElasticsearchOperations es;
@@ -71,27 +74,27 @@ public class IndexingConsumer {
         log.debug("Received FIR DTO with firId: {}", dto != null ? dto.getFirId() : "null");
         try {
             FirRecord entity = FirRecord.from(dto);
-            // 1. Postgres upsert (idempotent on PK)
-            firRepo.save(entity);
-
-            // 2. ElasticSearch index (_id = fir_id, idempotent on _id)
             Map<String, Object> doc = toEsDoc(dto);
             IndexQuery iq = new IndexQueryBuilder()
                     .withId(dto.getFirId())
                     .withObject(doc)
                     .build();
-            es.index(iq, IndexCoordinates.of(crimeIndex));
+
+            // Parallel PG + ES writes via virtual threads
+            CompletableFuture<Void> pgFuture = CompletableFuture.runAsync(() ->
+                    firRepo.save(entity), IO_EXECUTOR);
+            CompletableFuture<Void> esFuture = CompletableFuture.runAsync(() ->
+                    es.index(iq, IndexCoordinates.of(crimeIndex)), IO_EXECUTOR);
+
+            CompletableFuture.allOf(pgFuture, esFuture).join();
 
             log.debug("Indexed FIR {} (district={}, crime_type={})",
                     dto.getFirId(), dto.getDistrictCode(), dto.getCrimeType());
 
-            // 3. Commit offset only after both writes succeed
             ack.acknowledge();
         } catch (Exception e) {
-            // Don't ack — Spring Kafka will retry the same event.
             log.error("Failed to index FIR {}: {} | offset will NOT be committed",
                     dto.getFirId(), e.getMessage(), e);
-            // Re-throw so the default error handler policies kicks in (retry + DLT later)
             throw new RuntimeException("Indexing failure for fir_id=" + dto.getFirId(), e);
         }
     }

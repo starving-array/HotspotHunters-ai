@@ -1,12 +1,17 @@
-﻿import { useNavigate } from 'react-router-dom';
+﻿import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { User, Globe, Bell, Moon, Wifi, Shield, LogOut, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function SettingsPage() {
-  const { logout } = useAuth();
+  const { logout, username, validateSession, isAuthenticated } = useAuth();
   const { locale, setLocale, toggleLocale, t } = useLanguage();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAuthenticated && !username) validateSession();
+  }, [isAuthenticated, username, validateSession]);
 
   function handleLogout() {
     logout();
@@ -37,10 +42,10 @@ export default function SettingsPage() {
               <User className="w-7 h-7 text-primary" />
             </div>
             <div>
-              <div className="text-[16px] font-semibold text-on-surface">DSP Murali Krishnan</div>
-              <div className="text-[12px] font-mono text-on-surface-variant">DySP · Cyber Crime Cell</div>
+              <div className="text-[16px] font-semibold text-on-surface">{username || 'Officer'}</div>
+              <div className="text-[12px] font-mono text-on-surface-variant">Investigating Officer</div>
               <div className="text-[11px] text-outline font-mono mt-1">
-                EMP-ID 1001 · Bengaluru Urban
+                {username ? `${username.toUpperCase()} · Session Active` : 'Not authenticated'}
               </div>
             </div>
           </div>
@@ -67,7 +72,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between p-3 bg-surface-container-low rounded">
               <div>
                 <div className="text-[13px] text-on-surface">Language</div>
-                <div className="text-[11px] text-outline font-mono mt-0.5">EN working, Kn nav stubbed (full in U5)</div>
+                <div className="text-[11px] text-outline font-mono mt-0.5">English / ಕನ್ನಡ toggle</div>
               </div>
               <button
                 onClick={toggleLocale}
