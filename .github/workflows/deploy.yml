@@ -115,32 +115,32 @@ jobs:
       - name: Deploy API to AppSail
         run: |
           catalyst --project "${{ secrets.CATALYST_PROJECT_NAME }}" \
-         --org "${{ secrets.CATALYST_ORG }}" \
-         deploy appsail \
-         --name ksp-api \
-         --source docker-archive:///tmp/images/ksp-api.tar.gz \
-         --port 9000 \
-         --verbose
+            --org "${{ secrets.CATALYST_ORG }}" \
+            deploy appsail \
+            --name ksp-api \
+            --source docker-archive:///tmp/images/ksp-api.tar.gz \
+            --port 9000 \
+            --verbose
 
       - name: Deploy ML Service to AppSail
         run: |
           catalyst --project "${{ secrets.CATALYST_PROJECT_NAME }}" \
-         --org "${{ secrets.CATALYST_ORG }}" \
-         deploy appsail \
-         --name ksp-ml \
-         --source docker-archive:///tmp/images/ksp-ml.tar.gz \
-         --port 9000 \
-         --verbose
+            --org "${{ secrets.CATALYST_ORG }}" \
+            deploy appsail \
+            --name ksp-ml \
+            --source docker-archive:///tmp/images/ksp-ml.tar.gz \
+            --port 9000 \
+            --verbose
 
       - name: Deploy Frontend to AppSail
         run: |
           catalyst --project "${{ secrets.CATALYST_PROJECT_NAME }}" \
-         --org "${{ secrets.CATALYST_ORG }}" \
-         deploy appsail \
-         --name ksp-frontend \
-         --source docker-archive:///tmp/images/ksp-frontend.tar.gz \
-         --port 9000 \
-         --verbose
+            --org "${{ secrets.CATALYST_ORG }}" \
+            deploy appsail \
+            --name ksp-frontend \
+            --source docker-archive:///tmp/images/ksp-frontend.tar.gz \
+            --port 9000 \
+            --verbose
 
       - name: Verify health
         run: |
